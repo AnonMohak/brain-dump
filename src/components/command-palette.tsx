@@ -2,6 +2,7 @@ import type { Dump, Item } from '@shared/schemas'
 import type { Filters } from '@shared/view'
 import {
   AlarmClock,
+  CalendarPlus,
   Braces,
   EyeOff,
   FileText,
@@ -93,6 +94,9 @@ export function CommandPalette({
           </CommandItem>
           <CommandItem onSelect={run(() => onExport('json'))}>
             <Braces /> Export view as JSON
+          </CommandItem>
+          <CommandItem onSelect={run(() => onExport('ics'))}>
+            <CalendarPlus /> Export view to calendar (.ics)
           </CommandItem>
           <CommandItem onSelect={run(onOpenDumps)}>
             <History /> Open dump history

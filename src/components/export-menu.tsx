@@ -1,4 +1,4 @@
-import { Braces, Download, FileText } from 'lucide-react'
+import { Braces, CalendarPlus, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,9 +9,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export type ExportFormat = 'md' | 'json'
+export type ExportFormat = 'md' | 'json' | 'ics'
 
-export function ExportMenu({ count, onExport }: { count: number; onExport: (format: ExportFormat) => void }) {
+export function ExportMenu({
+  count,
+  datedCount,
+  onExport,
+}: {
+  count: number
+  /** Open items with a due date in the view: these become calendar events. */
+  datedCount: number
+  onExport: (format: ExportFormat) => void
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -29,6 +38,11 @@ export function ExportMenu({ count, onExport }: { count: number; onExport: (form
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onExport('json')}>
           <Braces /> JSON (.json)
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => onExport('ics')} disabled={datedCount === 0}>
+          <CalendarPlus /> Calendar (.ics)
+          <span className="ml-auto text-xs text-muted-foreground tabular-nums">{datedCount}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,5 +1,6 @@
 import type { ItemType, UpdateItemInput } from '@shared/schemas'
 import { exportFileName, toJson, toMarkdown } from '@shared/export'
+import { toIcs } from '@shared/ics'
 import { allTags, applyFilters, isArchived } from '@shared/view'
 import { Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
@@ -155,6 +156,14 @@ ${extra}` : extra)),
     (format: ExportFormat) => {
       const exportedAt = new Date()
       const input = { items: visibleItems, dumps: dumps.data ?? [], filters, exportedAt }
+      if (format === 'ics') {
+        const { text, count } = toIcs(visibleItems, exportedAt)
+        downloadText(exportFileName('ics', exportedAt), text, 'text/calendar')
+        toast.success(`Exported ${count} event${count === 1 ? '' : 's'}`, {
+          description: 'Open the file to add them to your calendar.',
+        })
+        return
+      }
       downloadText(
         exportFileName(format, exportedAt),
         format === 'md' ? toMarkdown(input) : toJson(input),
@@ -208,7 +217,11 @@ ${extra}` : extra)),
               <Sparkles /> <span className="hidden sm:inline">Ask</span>
             </Button>
           )}
-          <ExportMenu count={visibleItems.length} onExport={onExport} />
+          <ExportMenu
+            count={visibleItems.length}
+            datedCount={visibleItems.filter((item) => item.status === 'open' && item.dueDate).length}
+            onExport={onExport}
+          />
           <DumpsSheet
             open={dumpsOpen}
             onOpenChange={setDumpsOpen}

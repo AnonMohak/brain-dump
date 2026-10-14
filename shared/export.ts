@@ -28,7 +28,7 @@ function stamp(date: Date) {
   }
 }
 
-export function exportFileName(extension: 'md' | 'json', date: Date): string {
+export function exportFileName(extension: 'md' | 'json' | 'ics', date: Date): string {
   const { day, time } = stamp(date)
   return `sift-${day}-${time}.${extension}`
 }
