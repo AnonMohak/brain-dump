@@ -5,12 +5,14 @@ import {
   normalizeTag,
   PRIORITIES,
   RECURRENCES,
+  WEEKDAYS,
   type Item,
   type ItemType,
   type Priority,
   type Recurrence,
+  type Weekday,
 } from '@shared/schemas'
-import { RECURRENCE_LABEL } from '@shared/recurrence'
+import { RECURRENCE_LABEL, WEEKDAY_LABEL, weekdayOf } from '@shared/recurrence'
 import { CalendarDays, Plus, Repeat2, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -44,13 +46,14 @@ type Draft = {
   dueDate: string | null
   dueTime: string
   recurrence: Recurrence | null
+  repeatDays: Weekday[] | null
   tags: string
   subtasks: { id?: string; text: string; done: boolean }[]
 }
 
 function draftFrom(target: Exclude<EditorTarget, null>): Draft {
   if (target.mode === 'create') {
-    return { type: target.type, title: '', details: '', priority: 'medium', dueDate: null, dueTime: '', recurrence: null, tags: '', subtasks: [] }
+    return { type: target.type, title: '', details: '', priority: 'medium', dueDate: null, dueTime: '', recurrence: null, repeatDays: null, tags: '', subtasks: [] }
   }
   const { item } = target
   return {
@@ -61,6 +64,7 @@ function draftFrom(target: Exclude<EditorTarget, null>): Draft {
     dueDate: item.dueDate,
     dueTime: item.dueTime ?? '',
     recurrence: item.recurrence,
+    repeatDays: item.repeatDays,
     tags: item.tags.join(', '),
     subtasks: item.subtasks.map((s) => ({ id: s.id, text: s.text, done: s.done })),
   }
@@ -101,6 +105,7 @@ function EditorDialog({ target, onClose, onDelete }: Omit<EditorProps, 'target'>
       dueDate: draft.dueDate,
       dueTime: draft.dueDate && draft.dueTime ? draft.dueTime : null,
       recurrence: draft.dueDate ? draft.recurrence : null,
+      repeatDays: draft.dueDate && draft.recurrence === 'weekly' ? draft.repeatDays : null,
       tags: parseTags(draft.tags),
       subtasks: subtasks.filter((s) => s.text.trim()).slice(0, MAX_SUBTASKS),
     }
@@ -247,34 +252,74 @@ function EditorDialog({ target, onClose, onDelete }: Omit<EditorProps, 'target'>
                       variant="ghost"
                       size="icon"
                       aria-label="Remove the date"
-                      onClick={() => set({ dueDate: null, dueTime: '', recurrence: null })}
+                      onClick={() => set({ dueDate: null, dueTime: '', recurrence: null, repeatDays: null })}
                     >
                       <X />
                     </Button>
                   </>
                 )}
               </div>
-              {draft.dueDate && (
-                <div className="flex items-center gap-1.5 pt-1" role="radiogroup" aria-label="Repeat">
-                  <Repeat2 className="size-3.5 text-muted-foreground" />
-                  {([null, ...RECURRENCES] as const).map((value) => (
-                    <button
-                      key={value ?? 'none'}
-                      type="button"
-                      role="radio"
-                      aria-checked={draft.recurrence === value}
-                      onClick={() => set({ recurrence: value })}
-                      className={cn(
-                        'h-6 rounded-md px-1.5 text-[11px] font-medium transition-colors',
-                        draft.recurrence === value ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      {value ? RECURRENCE_LABEL[value] : 'Once'}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
+          </div>
+
+          {/* Repeat: a full-width row, so all choices fit on one line. */}
+          <div className="-mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {draft.dueDate && (
+            <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5" role="radiogroup" aria-label="Repeat">
+              <Repeat2 className="size-3.5 text-muted-foreground" />
+              {([null, ...RECURRENCES] as const).map((value) => (
+                <button
+                  key={value ?? 'none'}
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.recurrence === value}
+                  onClick={() =>
+                    set({
+                      recurrence: value,
+                      // Weekly starts on the weekday of the due date; add more days below.
+                      repeatDays:
+                        value === 'weekly'
+                          ? (draft.repeatDays ?? (draft.dueDate ? [weekdayOf(draft.dueDate)] : null))
+                          : null,
+                    })
+                  }
+                  className={cn(
+                    'h-6 rounded-md px-1.5 text-[11px] font-medium transition-colors',
+                    draft.recurrence === value ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {value ? RECURRENCE_LABEL[value] : 'Once'}
+                </button>
+              ))}
+            </div>
+          )}
+          {draft.dueDate && draft.recurrence === 'weekly' && (
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Repeat on these days">
+              {WEEKDAYS.map((day) => {
+                const on = draft.repeatDays?.includes(day) ?? false
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={WEEKDAY_LABEL[day]}
+                    onClick={() => {
+                      const current = draft.repeatDays ?? []
+                      const next = on ? current.filter((d) => d !== day) : [...current, day]
+                      // Keep at least one day.
+                      if (next.length) set({ repeatDays: WEEKDAYS.filter((d) => next.includes(d)) })
+                    }}
+                    className={cn(
+                      'size-6 rounded-full text-[10px] font-semibold transition-colors',
+                      on ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {WEEKDAY_LABEL[day].slice(0, 2)}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           </div>
 
           <div className="space-y-1.5">

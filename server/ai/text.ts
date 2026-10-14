@@ -1,5 +1,6 @@
 import { localNow, type LocalNow } from '../../shared/dates'
 import type { TextEvent, TextMode } from '../../shared/events'
+import { describeRepeat } from '../../shared/recurrence'
 import type { Item } from '../../shared/schemas'
 import type { Db } from '../db/client'
 import { listItems } from '../db/repo'
@@ -32,7 +33,7 @@ Rules:
 function itemLine(item: Item): string {
   const parts = [`${item.type}`, item.priority]
   if (item.dueDate) parts.push(`due ${item.dueDate}${item.dueTime ? ` ${item.dueTime}` : ''}`)
-  if (item.recurrence) parts.push(`repeats ${item.recurrence}`)
+  if (item.recurrence) parts.push(`repeats ${describeRepeat(item.recurrence, item.repeatDays).toLowerCase()}`)
   if (item.status === 'done') parts.push(item.completedAt ? `done on ${item.completedAt.slice(0, 10)}` : 'done')
   if (item.tags.length) parts.push(item.tags.map((t) => `#${t}`).join(' '))
   const steps = item.subtasks.length ? `; steps ${item.subtasks.filter((s) => s.done).length}/${item.subtasks.length}` : ''

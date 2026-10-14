@@ -7,10 +7,11 @@ import type {
   ItemType,
   Priority,
   Recurrence,
+  Weekday,
   updateItemInputSchema,
 } from '../../shared/schemas'
 import type { z } from 'zod'
-import { nextDueDate } from '../../shared/recurrence'
+import { alignToDays, nextDueDate } from '../../shared/recurrence'
 import type { Db } from './client'
 import { dumps, items, subtasks } from './schema'
 
@@ -47,6 +48,7 @@ export type NewItem = {
   dueTime: string | null
   dueSource: DueSource | null
   recurrence?: Recurrence | null
+  repeatDays?: Weekday[] | null
   tags: string[]
   sourceQuote: string | null
   position: number
@@ -85,6 +87,9 @@ function insertSubtasks(tx: Pick<Db, 'insert'>, itemId: string, list: NewItem['s
 
 export function createItem(db: Db, input: NewItem): Item {
   const id = newId()
+  // Weekdays belong to a weekly repeat only; the first date falls on one of them.
+  const repeatDays = input.recurrence === 'weekly' && input.repeatDays?.length ? input.repeatDays : null
+  const dueDate = input.dueDate && repeatDays ? alignToDays(input.dueDate, repeatDays) : input.dueDate
   const timestamp = nowIso()
   db.transaction((tx) => {
     tx.insert(items)
@@ -95,10 +100,11 @@ export function createItem(db: Db, input: NewItem): Item {
         title: input.title,
         details: input.details,
         priority: input.priority,
-        dueDate: input.dueDate,
-        dueTime: input.dueDate ? input.dueTime : null,
-        dueSource: input.dueDate ? input.dueSource : null,
-        recurrence: input.recurrence ?? null,
+        dueDate,
+        dueTime: dueDate ? input.dueTime : null,
+        dueSource: dueDate ? input.dueSource : null,
+        recurrence: dueDate ? (input.recurrence ?? null) : null,
+        repeatDays: dueDate ? repeatDays : null,
         tags: input.tags,
         sourceQuote: input.sourceQuote,
         status: 'open',
@@ -133,14 +139,24 @@ export function updateItem(db: Db, id: string, patch: ItemPatch): Item | null {
     values.dueSource = null
   }
 
-  // A repeating item is never "done": it moves to its next date, with fresh subtasks.
+  // Weekdays belong to a weekly repeat only.
   const recurrence = fields.recurrence !== undefined ? fields.recurrence : current.recurrence
-  const dueDate = fields.dueDate !== undefined ? fields.dueDate : current.dueDate
+  const repeatDays =
+    recurrence === 'weekly' ? (fields.repeatDays !== undefined ? fields.repeatDays : current.repeatDays) : null
+  if (fields.recurrence !== undefined || fields.repeatDays !== undefined) values.repeatDays = repeatDays
+  let dueDate = fields.dueDate !== undefined ? fields.dueDate : current.dueDate
+  // New weekdays: put the date on one of them.
+  if (dueDate && repeatDays?.length && fields.repeatDays !== undefined && fields.status === undefined) {
+    const aligned = alignToDays(dueDate, repeatDays)
+    if (aligned !== dueDate) values.dueDate = dueDate = aligned
+  }
+
+  // A repeating item is never "done": it moves to its next date, with fresh subtasks.
   let resetSubtasks = false
   if (fields.status === 'done' && current.status === 'open' && recurrence && dueDate && fields.dueDate === undefined) {
     values.status = 'open'
     values.completedAt = null
-    values.dueDate = nextDueDate(dueDate, recurrence, timestamp.slice(0, 10))
+    values.dueDate = nextDueDate(dueDate, recurrence, timestamp.slice(0, 10), repeatDays)
     resetSubtasks = !subtaskPatch
   }
 

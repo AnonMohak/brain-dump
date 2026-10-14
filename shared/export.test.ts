@@ -10,6 +10,7 @@ const base: Omit<Item, 'id' | 'type' | 'title' | 'priority' | 'position'> = {
   dueTime: null,
   dueSource: null,
   recurrence: null,
+  repeatDays: null,
   tags: [],
   sourceQuote: null,
   status: 'open',

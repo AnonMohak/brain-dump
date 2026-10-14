@@ -12,6 +12,7 @@ const baseItem: NewItem = {
   dueTime: null,
   dueSource: null,
   recurrence: null,
+  repeatDays: null,
   tags: [],
   sourceQuote: null,
   position: 0,
@@ -188,5 +189,47 @@ describe('repeating items', () => {
     const created = await call('POST', '/api/items', { type: 'task', title: 'X', recurrence: 'weekly' })
     expect(created.data.recurrence).toBeNull()
     expect((await call('PATCH', `/api/items/${created.data.id}`, { status: 'done' })).data.status).toBe('done')
+  })
+})
+
+describe('weekly repeats on fixed weekdays', () => {
+  test('Mon/Wed/Fri: done moves Mon -> Wed -> Fri -> Mon, as one item', async () => {
+    const { call } = makeTestApp()
+    // 2099-03-02 is a Monday, safely in the future.
+    const created = await call('POST', '/api/items', {
+      type: 'task', title: 'Gym', dueDate: '2099-03-02', dueTime: '07:00',
+      recurrence: 'weekly', repeatDays: ['fri', 'mon', 'wed', 'mon'],
+    })
+    expect(created.data).toMatchObject({ recurrence: 'weekly', repeatDays: ['mon', 'wed', 'fri'], dueDate: '2099-03-02' })
+
+    const id = created.data.id
+    const dates: string[] = []
+    for (let i = 0; i < 3; i++) dates.push((await call('PATCH', `/api/items/${id}`, { status: 'done' })).data.dueDate)
+    expect(dates).toEqual(['2099-03-04', '2099-03-06', '2099-03-09'])
+    expect((await call('GET', '/api/items')).data).toHaveLength(1)
+  })
+
+  test('a due date that is not on a listed day moves to the next listed day', async () => {
+    const { call } = makeTestApp()
+    // 2099-03-03 is a Tuesday.
+    const created = await call('POST', '/api/items', {
+      type: 'task', title: 'Swim', dueDate: '2099-03-03', recurrence: 'weekly', repeatDays: ['sat'],
+    })
+    expect(created.data.dueDate).toBe('2099-03-07')
+
+    const changed = await call('PATCH', `/api/items/${created.data.id}`, { repeatDays: ['thu'] })
+    expect(changed.data).toMatchObject({ repeatDays: ['thu'], dueDate: '2099-03-12' })
+  })
+
+  test('days are dropped for other repeats', async () => {
+    const { call } = makeTestApp()
+    const created = await call('POST', '/api/items', {
+      type: 'task', title: 'Rent', dueDate: '2099-03-02', recurrence: 'monthly', repeatDays: ['mon'],
+    })
+    expect(created.data.repeatDays).toBeNull()
+    const weekly = await call('PATCH', `/api/items/${created.data.id}`, { recurrence: 'weekly', repeatDays: ['mon', 'thu'] })
+    expect(weekly.data.repeatDays).toEqual(['mon', 'thu'])
+    const back = await call('PATCH', `/api/items/${created.data.id}`, { recurrence: 'monthly' })
+    expect(back.data.repeatDays).toBeNull()
   })
 })

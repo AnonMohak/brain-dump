@@ -1,4 +1,5 @@
 import { dueMoment, dueState, formatDue, snoozeTargets } from '@shared/dates'
+import { describeRepeat } from '@shared/recurrence'
 import { ITEM_TYPES, PRIORITIES, type Item, type Priority, type UpdateItemInput } from '@shared/schemas'
 import {
   ArrowRightLeft,
@@ -172,10 +173,12 @@ export const ItemCard = memo(function ItemCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex h-5 items-center text-muted-foreground">
-                    <Repeat2 className="size-3.5" aria-label={`Repeats ${item.recurrence}`} />
+                    <Repeat2 className="size-3.5" aria-label={`Repeats ${describeRepeat(item.recurrence, item.repeatDays)}`} />
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Repeats {item.recurrence}. Marking it done moves it to the next date.</TooltipContent>
+                <TooltipContent>
+                  Repeats {describeRepeat(item.recurrence, item.repeatDays)}. Marking it done moves it to the next date.
+                </TooltipContent>
               </Tooltip>
             )}
             {item.subtasks.length > 0 && (

@@ -7,6 +7,8 @@ export const PRIORITIES = ['high', 'medium', 'low'] as const
 export const DUE_SOURCES = ['stated', 'suggested'] as const
 export const ITEM_STATUSES = ['open', 'done'] as const
 export const RECURRENCES = ['daily', 'weekly', 'monthly', 'yearly'] as const
+/** Weekdays for a weekly repeat, in calendar order (Monday first). */
+export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 export const DUMP_STATUSES = ['processing', 'done', 'failed', 'cancelled'] as const
 
 export const itemTypeSchema = z.enum(ITEM_TYPES)
@@ -15,6 +17,15 @@ export const dueSourceSchema = z.enum(DUE_SOURCES)
 export const itemStatusSchema = z.enum(ITEM_STATUSES)
 export const dumpStatusSchema = z.enum(DUMP_STATUSES)
 export const recurrenceSchema = z.enum(RECURRENCES)
+export const weekdaySchema = z.enum(WEEKDAYS)
+
+/** Weekdays for a weekly repeat: unique, in calendar order; an empty list means "none". */
+export const repeatDaysSchema = z
+  .array(weekdaySchema)
+  .transform((days) => {
+    const unique = WEEKDAYS.filter((day) => days.includes(day))
+    return unique.length ? unique : null
+  })
 
 export type ItemType = z.infer<typeof itemTypeSchema>
 export type Priority = z.infer<typeof prioritySchema>
@@ -22,6 +33,7 @@ export type DueSource = z.infer<typeof dueSourceSchema>
 export type ItemStatus = z.infer<typeof itemStatusSchema>
 export type DumpStatus = z.infer<typeof dumpStatusSchema>
 export type Recurrence = z.infer<typeof recurrenceSchema>
+export type Weekday = z.infer<typeof weekdaySchema>
 
 // ---------- Limits ----------
 
@@ -89,6 +101,8 @@ export const itemSchema = z.object({
   dueTime: timeSchema.nullable(),
   dueSource: dueSourceSchema.nullable(),
   recurrence: recurrenceSchema.nullable(),
+  /** Only for a weekly repeat, e.g. ["mon", "wed", "fri"]. Null means "the weekday of the due date". */
+  repeatDays: z.array(weekdaySchema).nullable(),
   tags: z.array(z.string()),
   sourceQuote: z.string().nullable(),
   status: itemStatusSchema,
@@ -130,6 +144,7 @@ export const createItemInputSchema = z.object({
   dueDate: isoDateSchema.nullable().optional(),
   dueTime: timeSchema.nullable().optional(),
   recurrence: recurrenceSchema.nullable().optional(),
+  repeatDays: repeatDaysSchema.nullable().optional(),
   tags: tagsSchema.default([]),
   subtasks: z.array(subtaskInputSchema).max(MAX_SUBTASKS).default([]),
 })
@@ -145,6 +160,7 @@ export const updateItemInputSchema = z
     dueTime: timeSchema.nullable(),
     dueSource: dueSourceSchema.nullable(),
     recurrence: recurrenceSchema.nullable(),
+    repeatDays: repeatDaysSchema.nullable(),
     tags: tagsSchema,
     status: itemStatusSchema,
     position: z.number().finite(),

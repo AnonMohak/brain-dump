@@ -1,4 +1,5 @@
 import { addDays } from '../../shared/dates'
+import { alignToDays } from '../../shared/recurrence'
 import { tagsSchema, type Item, type Priority } from '../../shared/schemas'
 import type { ItemPatch, NewItem } from '../db/repo'
 import { aiLineSchema, type AiItemLine, type AiLine, type AiUpdateLine } from './schema'
@@ -8,6 +9,9 @@ export const SUGGESTED_DAYS: Record<Priority, number> = { high: 1, medium: 5, lo
 
 /** Parses one model object. Adds a missing "kind" when the shape makes it clear. */
 export function parseAiObject(value: unknown): AiLine | null {
+  if (value && typeof value === 'object' && 'repeatDays' in value && !('repeat_days' in value)) {
+    value = { ...(value as Record<string, unknown>), repeat_days: (value as Record<string, unknown>).repeatDays }
+  }
   if (value && typeof value === 'object' && !('kind' in value)) {
     const record = value as Record<string, unknown>
     if ('ref' in record) value = { ...record, kind: 'update' }
@@ -63,6 +67,10 @@ export function normalizeItem(
     due = { date: addDays(ctx.today, SUGGESTED_DAYS[line.priority]), time: null, source: 'suggested' }
   }
 
+  // Weekly days: the first date must fall on one of them.
+  const days = due ? line.repeat_days : []
+  if (due && days.length && days.length < 7) due = { ...due, date: alignToDays(due.date, days) }
+
   return {
     dumpId: ctx.dumpId,
     type: line.type,
@@ -73,7 +81,7 @@ export function normalizeItem(
     dueTime: due?.time ?? null,
     dueSource: due?.source ?? null,
     // A repeat needs a date to repeat from.
-    recurrence: due ? line.repeat : null,
+    ...repeatOf(line, due?.date ?? null),
     tags: tagsSchema.parse(line.tags),
     sourceQuote: verifyQuote(ctx.rawText, line.quote),
     subtasks: line.subtasks.map((text) => ({ text })),
@@ -107,4 +115,13 @@ export function normalizeUpdate(line: AiUpdateLine, item: Item, today: string): 
   const tags = tagsSchema.parse([...item.tags, ...line.tags])
   if (tags.length !== item.tags.length) patch.tags = tags
   return Object.keys(patch).length ? patch : null
+}
+
+/** The repeat of an AI item: weekdays make it weekly, all seven days is daily, no date means no repeat. */
+function repeatOf(line: AiItemLine, dueDate: string | null): Pick<NewItem, 'recurrence' | 'repeatDays'> {
+  if (!dueDate) return { recurrence: null, repeatDays: null }
+  const days = line.repeat_days
+  if (days.length === 7) return { recurrence: 'daily', repeatDays: null }
+  if (days.length > 0) return { recurrence: 'weekly', repeatDays: days }
+  return { recurrence: line.repeat, repeatDays: null }
 }

@@ -4,7 +4,7 @@ import type { Item } from './schemas'
 
 const base: Item = {
   id: 'x', dumpId: null, type: 'task', title: 'T', details: null, priority: 'medium',
-  dueDate: null, dueTime: null, dueSource: null, recurrence: null, tags: [], sourceQuote: null,
+  dueDate: null, dueTime: null, dueSource: null, recurrence: null, repeatDays: null, tags: [], sourceQuote: null,
   status: 'open', position: 0, subtasks: [], createdAt: '', updatedAt: '', completedAt: null,
 }
 const at = new Date('2026-10-14T08:30:00Z')
@@ -53,4 +53,9 @@ describe('helpers', () => {
     for (const part of folded.split('\r\n')) expect(new TextEncoder().encode(part).length).toBeLessThanOrEqual(75)
     expect(folded.split('\r\n').map((p, i) => (i ? p.slice(1) : p)).join('')).toBe(long)
   })
+})
+
+test('a weekly repeat on fixed days becomes BYDAY', () => {
+  const { text } = toIcs([{ ...base, title: 'Gym', dueDate: '2026-10-16', recurrence: 'weekly', repeatDays: ['mon', 'wed', 'fri'] }], at)
+  expect(text).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR')
 })

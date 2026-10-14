@@ -7,6 +7,7 @@ import {
   ITEM_TYPES,
   PRIORITIES,
   RECURRENCES,
+  type Weekday,
 } from '../../shared/schemas'
 
 export const dumps = sqliteTable('dumps', {
@@ -36,6 +37,8 @@ export const items = sqliteTable(
     dueSource: text('due_source', { enum: DUE_SOURCES }),
     // Repeating items move to the next date when marked done.
     recurrence: text('recurrence', { enum: RECURRENCES }),
+    // Weekdays of a weekly repeat, e.g. ["mon","wed","fri"].
+    repeatDays: text('repeat_days', { mode: 'json' }).$type<Weekday[]>(),
     tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
     sourceQuote: text('source_quote'),
     status: text('status', { enum: ITEM_STATUSES }).notNull().default('open'),

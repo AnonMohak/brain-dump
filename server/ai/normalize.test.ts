@@ -147,3 +147,22 @@ describe('repeat', () => {
     expect(normalizeItem(item({ title: 'Bad', repeat: 'fortnightly' }), c)?.recurrence).toBeNull()
   })
 })
+
+describe('repeat_days', () => {
+  test('weekdays make one weekly item, and its first date falls on a listed day', () => {
+    const c = ctx() // today is Wed 2026-10-14
+    const gym = normalizeItem(
+      item({ title: 'Gym', repeat: 'weekly', repeat_days: ['Monday', 'wed', 'FRI'], due: { date: '2026-10-15', time: '07:00', source: 'stated' } }),
+      c,
+    )
+    expect(gym).toMatchObject({ recurrence: 'weekly', repeatDays: ['mon', 'wed', 'fri'], dueDate: '2026-10-16', dueTime: '07:00' })
+  })
+
+  test('days without "repeat" still mean weekly; all seven days mean daily; bad days are ignored', () => {
+    const c = ctx()
+    const due = { date: '2026-10-17', source: 'stated' }
+    expect(normalizeItem(item({ title: 'A', repeatDays: ['sat', 'sun'], due }), c)).toMatchObject({ recurrence: 'weekly', repeatDays: ['sat', 'sun'] })
+    expect(normalizeItem(item({ title: 'B', repeat_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], due }), c)).toMatchObject({ recurrence: 'daily', repeatDays: null })
+    expect(normalizeItem(item({ title: 'C', repeat: 'weekly', repeat_days: ['someday'], due }), c)).toMatchObject({ recurrence: 'weekly', repeatDays: null })
+  })
+})

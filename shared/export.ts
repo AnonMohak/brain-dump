@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { dumpSchema, itemSchema, PRIORITIES, recurrenceSchema, type Dump, type Item, type ItemType } from './schemas'
+import { describeRepeat } from './recurrence'
 import { groupByType, hasActiveFilters, type Filters } from './view'
 
 const SECTION: Record<ItemType, string> = {
@@ -56,7 +57,7 @@ function itemLine(item: Item): string[] {
       `due ${item.dueDate}${item.dueTime ? ` ${item.dueTime}` : ''}${item.dueSource === 'suggested' ? ' (suggested)' : ''}`,
     )
   }
-  if (item.recurrence && item.dueDate) meta.push(`repeats ${item.recurrence}`)
+  if (item.recurrence && item.dueDate) meta.push(`repeats ${describeRepeat(item.recurrence, item.repeatDays).toLowerCase()}`)
   if (item.tags.length) meta.push(item.tags.map((t) => `#${t}`).join(' '))
   if (done && !CHECKBOX_TYPES.includes(item.type)) meta.push('done')
 
@@ -131,7 +132,12 @@ export const importJsonSchema = z.object({
   version: z.literal(1),
   dumps: z.array(dumpSchema.omit({ itemCount: true })).max(5000),
   items: z
-    .array(itemSchema.extend({ recurrence: recurrenceSchema.nullable().default(null) }))
+    .array(
+      itemSchema.extend({
+        recurrence: recurrenceSchema.nullable().default(null),
+        repeatDays: itemSchema.shape.repeatDays.default(null),
+      }),
+    )
     .max(20000),
 })
 export type ImportJson = z.infer<typeof importJsonSchema>

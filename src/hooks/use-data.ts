@@ -1,4 +1,4 @@
-import { normalizeTag, type CreateItemInput, type Item, type UpdateItemInput } from '@shared/schemas'
+import { normalizeTag, WEEKDAYS, type CreateItemInput, type Item, type UpdateItemInput } from '@shared/schemas'
 import { toLocalIsoDate } from '@shared/dates'
 import { isRecurring, nextDueDate } from '@shared/recurrence'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -40,9 +40,14 @@ function applyPatch(item: Item, patch: UpdateItemInput): Item {
   }
   if (patch.dueTime !== undefined && next.dueDate) next.dueTime = patch.dueTime
   if (patch.recurrence !== undefined) next.recurrence = patch.recurrence
+  if (patch.repeatDays !== undefined) {
+    const days = patch.repeatDays?.length ? WEEKDAYS.filter((d) => patch.repeatDays!.includes(d)) : null
+    next.repeatDays = next.recurrence === 'weekly' ? days : null
+  }
+  if (next.recurrence !== 'weekly') next.repeatDays = null
   if (patch.status === 'done' && item.status === 'open' && isRecurring(next) && patch.dueDate === undefined) {
     // Same rule as the server: a repeating item moves to its next date.
-    next.dueDate = nextDueDate(next.dueDate!, next.recurrence!, toLocalIsoDate(new Date()))
+    next.dueDate = nextDueDate(next.dueDate!, next.recurrence!, toLocalIsoDate(new Date()), next.repeatDays)
     next.subtasks = next.subtasks.map((s) => ({ ...s, done: false }))
   } else if (patch.status !== undefined && patch.status !== item.status) {
     next.status = patch.status

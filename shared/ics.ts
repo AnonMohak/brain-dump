@@ -1,15 +1,9 @@
 import { addDays } from './dates'
-import type { Item, Recurrence } from './schemas'
+import { toRrule } from './recurrence'
+import type { Item } from './schemas'
 
 // iCalendar (RFC 5545) export. Times are "floating" (no time zone), so an event
 // at 17:00 stays at 17:00 in the calendar app of the user.
-
-const RRULE: Record<Recurrence, string> = {
-  daily: 'FREQ=DAILY',
-  weekly: 'FREQ=WEEKLY',
-  monthly: 'FREQ=MONTHLY',
-  yearly: 'FREQ=YEARLY',
-}
 
 const TYPE_LABEL = { task: 'Task', idea: 'Idea', reminder: 'Reminder', question: 'Question' } as const
 
@@ -78,7 +72,7 @@ export function toIcs(items: Item[], exportedAt: Date): { text: string; count: n
     }
     lines.push(`SUMMARY:${escapeText(item.title)}`, `DESCRIPTION:${escapeText(description)}`)
     if (item.tags.length) lines.push(`CATEGORIES:${item.tags.map(escapeText).join(',')}`)
-    if (item.recurrence) lines.push(`RRULE:${RRULE[item.recurrence]}`)
+    if (item.recurrence) lines.push(`RRULE:${toRrule(item.recurrence, item.repeatDays)}`)
     if (item.priority === 'high') lines.push('PRIORITY:1')
     if (item.dueTime) {
       lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapeText(item.title)}`, 'TRIGGER:-PT15M', 'END:VALARM')

@@ -9,6 +9,7 @@ import {
   prioritySchema,
   recurrenceSchema,
   timeSchema,
+  WEEKDAYS,
 } from '../../shared/schemas'
 
 // The schemas for one line of model output. They accept small mistakes
@@ -50,6 +51,17 @@ export const aiItemLineSchema = z.object({
     .catch([])
     .default([]),
   repeat: z.preprocess(lower, recurrenceSchema.nullable()).catch(null).default(null),
+  repeat_days: z
+    .preprocess(
+      (v) =>
+        Array.isArray(v)
+          ? v.filter((d) => typeof d === 'string').map((d: string) => d.trim().toLowerCase().slice(0, 3))
+          : v,
+      z.array(z.string()),
+    )
+    .transform((days) => WEEKDAYS.filter((day) => days.includes(day)))
+    .catch([])
+    .default([]),
 })
 
 /** A change to an item that the user already has (prompt rule 13). */

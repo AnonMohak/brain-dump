@@ -30,7 +30,7 @@ export function inversePatch(item: Item, patch: UpdateItemInput): UpdateItemInpu
 /** A short toast text for a change, or null when the change is too small to announce. */
 export function describeChange(patch: UpdateItemInput, item?: Item, today = toLocalIsoDate(new Date())): string | null {
   if (item && completesRecurring(item, patch)) {
-    const next = nextDueDate(item.dueDate!, item.recurrence!, today)
+    const next = nextDueDate(item.dueDate!, item.recurrence!, today, item.repeatDays)
     return `Done. Next: ${formatDue(next, item.dueTime, dueMoment(today, '12:00'))}`
   }
   if (patch.status === 'done') return 'Marked as done'
