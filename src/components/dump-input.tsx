@@ -1,9 +1,11 @@
 import { MAX_DUMP_CHARS } from '@shared/schemas'
-import { AlertTriangle, CornerDownLeft, Loader2, Sparkles, Square } from 'lucide-react'
+import { AlertTriangle, CornerDownLeft, FileText, Loader2, Sparkles, Square } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import type { OrganizeState } from '@/hooks/use-organize'
+import { readTextFile } from '@/lib/files'
 import { cn } from '@/lib/utils'
 
 const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform)
@@ -20,6 +22,10 @@ type DumpInputProps = {
   /** Extra controls on the left of the footer (voice, file). */
   tools?: ReactNode
   textareaRef?: React.Ref<HTMLTextAreaElement>
+  /** Text from a dropped .txt or .md file. */
+  onDropText?: (text: string) => void
+  /** Words that dictation heard but did not finish yet. */
+  interim?: string
 }
 
 export function DumpInput({
@@ -33,18 +39,47 @@ export function DumpInput({
   onTryExample,
   tools,
   textareaRef,
+  onDropText,
+  interim,
 }: DumpInputProps) {
+  const [dragging, setDragging] = useState(false)
   const length = value.length
   const tooLong = length > MAX_DUMP_CHARS
   const canSubmit = value.trim().length > 0 && !tooLong && !busy
 
   return (
     <div
+      onDragOver={(e) => {
+        if (!onDropText || busy || !e.dataTransfer.types.includes('Files')) return
+        e.preventDefault()
+        setDragging(true)
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false)
+      }}
+      onDrop={async (e) => {
+        if (!onDropText || busy) return
+        e.preventDefault()
+        setDragging(false)
+        const file = e.dataTransfer.files[0]
+        if (!file) return
+        try {
+          onDropText(await readTextFile(file))
+        } catch (error) {
+          toast.error((error as Error).message)
+        }
+      }}
       className={cn(
         'relative rounded-xl border bg-card shadow-xs transition-[border-color,box-shadow] focus-within:border-ring/60 focus-within:ring-3 focus-within:ring-ring/15',
         busy && 'border-primary/40',
+        dragging && 'border-primary border-dashed',
       )}
     >
+      {dragging && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl bg-background/85 text-sm font-medium text-primary backdrop-blur-sm">
+          <FileText className="size-4" /> Drop the file to load its text
+        </div>
+      )}
       {busy && (
         <div className="absolute inset-x-0 top-0 h-px overflow-hidden rounded-t-xl" aria-hidden="true">
           <div className="h-full w-1/3 animate-[sift-scan_1.6s_ease-in-out_infinite] bg-linear-to-r from-transparent via-primary to-transparent" />
@@ -68,6 +103,12 @@ export function DumpInput({
         placeholder="Dump everything on your mind. Messy is fine. Sift sorts it into tasks, ideas, reminders and questions."
         className="block max-h-[45vh] min-h-32 w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-[15px] leading-relaxed outline-none [field-sizing:content] placeholder:text-muted-foreground/70 read-only:text-muted-foreground"
       />
+
+      {interim && (
+        <p className="px-4 pb-2 text-[15px] leading-relaxed text-muted-foreground/70 italic" aria-live="polite">
+          {interim}…
+        </p>
+      )}
 
       {aiConfigured === false && (
         <p className="mx-3 mb-2 flex items-start gap-2 rounded-lg bg-due-soon/10 px-3 py-2 text-xs text-due-soon">
