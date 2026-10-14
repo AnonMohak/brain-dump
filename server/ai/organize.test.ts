@@ -333,3 +333,51 @@ describe('Gemini first, Nemotron as fallback', () => {
     expect(res.data).toMatchObject({ aiConfigured: true, model: GEMINI, models: [GEMINI, ULTRA, SUPER] })
   })
 })
+
+describe('merging into existing items', () => {
+  test('an update line changes the existing item instead of adding one', async () => {
+    const fake = fakeFetch(() =>
+      streamResponse([
+        '{"kind":"meta","title":"Dentist again","summary":"The tooth still hurts."}\n',
+        '{"kind":"update","ref":"#1","priority":"high","details":"Still hurts.","due":{"date":"2026-10-16","time":"09:30","source":"stated"},"tags":["urgent"]}\n',
+        '{"kind":"update","ref":"#9","priority":"low"}\n',
+        '{"kind":"item","type":"idea","title":"Try a softer toothbrush","priority":"low"}\n',
+      ]),
+    )
+    const app = makeTestApp({ env: KEY_ENV, fetch: fake.fetch })
+    const existing = await app.call('POST', '/api/items', {
+      type: 'task',
+      title: 'Call the dentist',
+      priority: 'medium',
+      details: 'Ask about the filling.',
+      tags: ['health'],
+    })
+
+    const { events } = await postDump(app, 'tooth still hurts!! call the dentist friday 9:30')
+    const prompt = fake.calls[0].messages[1].content
+    expect(prompt).toContain('Existing open items:\n#1 task: Call the dentist (medium)')
+
+    const update = events.find((e) => e.type === 'update')
+    expect(update.item).toMatchObject({
+      id: existing.data.id,
+      priority: 'high',
+      details: 'Ask about the filling.\nStill hurts.',
+      dueDate: '2026-10-16',
+      dueTime: '09:30',
+      dueSource: 'stated',
+      tags: ['health', 'urgent'],
+    })
+    // The unknown ref #9 is skipped; the new idea is still added.
+    expect(events.filter((e) => e.type === 'item')).toHaveLength(1)
+    expect(events.at(-1)).toMatchObject({ type: 'done', merged: 1, dump: { itemCount: 1 } })
+    expect((await app.call('GET', '/api/items')).data).toHaveLength(2)
+  })
+
+  test('a dump that only updates existing items still succeeds', async () => {
+    const fake = fakeFetch(() => streamResponse(['{"kind":"update","ref":"#1","priority":"high"}\n']))
+    const app = makeTestApp({ env: KEY_ENV, fetch: fake.fetch })
+    await app.call('POST', '/api/items', { type: 'task', title: 'Pay rent', priority: 'low' })
+    const { events } = await postDump(app, 'rent is urgent now')
+    expect(events.at(-1)).toMatchObject({ type: 'done', merged: 1, dump: { status: 'done', itemCount: 0 } })
+  })
+})

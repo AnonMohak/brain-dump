@@ -1,7 +1,7 @@
 import { addDays } from '../../shared/dates'
-import { tagsSchema, type Priority } from '../../shared/schemas'
-import type { NewItem } from '../db/repo'
-import { aiLineSchema, type AiItemLine, type AiLine } from './schema'
+import { tagsSchema, type Item, type Priority } from '../../shared/schemas'
+import type { ItemPatch, NewItem } from '../db/repo'
+import { aiLineSchema, type AiItemLine, type AiLine, type AiUpdateLine } from './schema'
 
 /** Days from today for a suggested date, when the model gives none. */
 export const SUGGESTED_DAYS: Record<Priority, number> = { high: 1, medium: 5, low: 14 }
@@ -10,7 +10,8 @@ export const SUGGESTED_DAYS: Record<Priority, number> = { high: 1, medium: 5, lo
 export function parseAiObject(value: unknown): AiLine | null {
   if (value && typeof value === 'object' && !('kind' in value)) {
     const record = value as Record<string, unknown>
-    if ('type' in record && 'title' in record) value = { ...record, kind: 'item' }
+    if ('ref' in record) value = { ...record, kind: 'update' }
+    else if ('type' in record && 'title' in record) value = { ...record, kind: 'item' }
     else if ('summary' in record && 'title' in record) value = { ...record, kind: 'meta' }
   }
   const result = aiLineSchema.safeParse(value)
@@ -75,4 +76,33 @@ export function normalizeItem(
     sourceQuote: verifyQuote(ctx.rawText, line.quote),
     subtasks: line.subtasks.map((text) => ({ text })),
   }
+}
+
+/**
+ * Turns an AI update line into a patch for an existing item. Returns null when
+ * nothing would change. Rules: details are added (not replaced), tags are
+ * merged, and a date changes only when the dump states one (or the item had none).
+ */
+export function normalizeUpdate(line: AiUpdateLine, item: Item, today: string): ItemPatch | null {
+  const patch: ItemPatch = {}
+  if (line.title && line.title !== item.title) patch.title = collapse(line.title)
+  if (line.priority && line.priority !== item.priority) patch.priority = line.priority
+  if (line.details) {
+    const extra = line.details.trim()
+    if (!item.details) patch.details = extra
+    else if (!item.details.toLowerCase().includes(extra.toLowerCase())) {
+      patch.details = `${item.details}\n${extra}`.slice(0, 2000)
+    }
+  }
+  if (line.due && (line.due.source === 'stated' || !item.dueDate)) {
+    const date = line.due.source === 'suggested' && line.due.date < today ? today : line.due.date
+    if (date !== item.dueDate || (line.due.time ?? null) !== item.dueTime) {
+      patch.dueDate = date
+      patch.dueTime = line.due.time ?? null
+      patch.dueSource = line.due.source
+    }
+  }
+  const tags = tagsSchema.parse([...item.tags, ...line.tags])
+  if (tags.length !== item.tags.length) patch.tags = tags
+  return Object.keys(patch).length ? patch : null
 }

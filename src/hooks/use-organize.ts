@@ -29,6 +29,14 @@ const IDLE: OrganizeState = {
   fresh: new Set(),
 }
 
+/** "Sorted into 4 items", "Sorted into 3 new items, updated 2", "Updated 1 existing item". */
+export function sortedMessage(created: number, merged: number): string {
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+  if (merged === 0) return `Sorted into ${plural(created, 'item')}`
+  if (created === 0) return `Updated ${plural(merged, 'existing item')}`
+  return `Sorted into ${plural(created, 'new item')}, updated ${merged}`
+}
+
 function clientClock() {
   return {
     now: new Date().toISOString(),
@@ -77,16 +85,23 @@ export function useOrganize() {
             setState((s) => ({ ...s, count: s.count + 1, fresh: new Set(s.fresh).add(item.id) }))
             break
           }
+          case 'update': {
+            const updated: Item = event.item
+            qc.setQueryData<Item[]>(itemsKey, (items) =>
+              (items ?? []).map((i) => (i.id === updated.id ? updated : i)),
+            )
+            setState((s) => ({ ...s, fresh: new Set(s.fresh).add(updated.id) }))
+            break
+          }
           case 'warning':
             toast.warning(event.message)
             break
           case 'done':
             succeeded = true
             upsertDump(event.dump)
-            toast.success(
-              `Sorted into ${event.dump.itemCount} item${event.dump.itemCount === 1 ? '' : 's'}`,
-              { description: event.dump.title ?? undefined },
-            )
+            toast.success(sortedMessage(event.dump.itemCount, event.merged), {
+              description: event.dump.title ?? undefined,
+            })
             break
           case 'error':
             if (event.dump) upsertDump(event.dump)

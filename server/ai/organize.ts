@@ -4,14 +4,17 @@ import type { Db } from '../db/client'
 import {
   createItem,
   getDump,
+  getItem,
+  listItems,
   listTags,
+  updateItem,
   topPosition,
   updateDump,
   type DumpPatch,
 } from '../db/repo'
 import type { Env } from '../env'
 import { createObjectScanner, tryParseJson } from './json-stream'
-import { normalizeItem, parseAiObject, type NormalizeContext } from './normalize'
+import { normalizeItem, normalizeUpdate, parseAiObject, type NormalizeContext } from './normalize'
 import { AiError, PROVIDER_NAME } from './chat-stream'
 import { attemptPlan } from './providers'
 import { buildMessages } from './prompt'
@@ -49,6 +52,9 @@ export type OrganizeArgs = {
   signal: AbortSignal
 }
 
+/** How many open items the prompt lists for merging. */
+const MAX_EXISTING_ITEMS = 100
+
 export const MISSING_KEY_MESSAGE =
   'The AI is not set up. Add GEMINI_API_KEY or OPENROUTER_API_KEY to .env and restart the server.'
 
@@ -85,6 +91,8 @@ export async function* organizeDump(
   const timeouts = { ...DEFAULT_TIMEOUTS, ...deps.timeouts }
 
   let saved = 0
+  /** Existing items that the dump updated instead of duplicating. */
+  let merged = 0
   let skipped = 0
   let modelUsed: string | null = null
   let lastError: string | null = null
@@ -105,7 +113,24 @@ export async function* organizeDump(
     }
 
     const local = localNow(new Date(args.now), args.timeZone)
-    const messages = buildMessages({ text: args.text, local, existingTags: listTags(db) })
+    // Open items that the AI may update instead of duplicating (newest first, short refs).
+    const openItems = listItems(db)
+      .filter((item) => item.status === 'open')
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, MAX_EXISTING_ITEMS)
+    const refs = new Map(openItems.map((item, index) => [`#${index + 1}`, item.id]))
+    const messages = buildMessages({
+      text: args.text,
+      local,
+      existingTags: listTags(db),
+      existingItems: openItems.map((item, index) => ({
+        ref: `#${index + 1}`,
+        type: item.type,
+        title: item.title,
+        priority: item.priority,
+        dueDate: item.dueDate,
+      })),
+    })
     const ctx: NormalizeContext = {
       today: local.date,
       rawText: args.text,
@@ -161,6 +186,22 @@ export async function* organizeDump(
                 yield { type: 'meta', title: line.title, summary: line.summary }
                 continue
               }
+              if (line.kind === 'update') {
+                const id = refs.get(line.ref.startsWith('#') ? line.ref : `#${line.ref}`)
+                const existing = id ? getItem(db, id) : null
+                if (!existing || existing.status !== 'open') {
+                  skipped++
+                  continue
+                }
+                const patch = normalizeUpdate(line, existing, ctx.today)
+                if (!patch) continue
+                const item = updateItem(db, existing.id, patch)
+                if (!item) continue
+                merged++
+                refs.delete(line.ref) // one update per item
+                yield { type: 'update', item }
+                continue
+              }
               const data = normalizeItem(line, ctx)
               if (!data) continue
               const item = createItem(db, { ...data, position: basePosition + saved })
@@ -170,7 +211,7 @@ export async function* organizeDump(
           }
         }
         if (scanner.hasPartial()) skipped++
-        if (saved === 0) lastError = 'The AI answer had no readable items.'
+        if (saved + merged === 0) lastError = 'The AI answer had no readable items.'
       } catch (error) {
         if (args.signal.aborted) break
         lastError = describeError(error, controller.signal.reason, attempt.model)
@@ -182,7 +223,7 @@ export async function* organizeDump(
       }
 
       // Keep a partial answer: the items that arrived are already saved.
-      if (saved > 0) break
+      if (saved + merged > 0) break
     }
 
     if (args.signal.aborted) {
@@ -197,7 +238,7 @@ export async function* organizeDump(
       }
     }
 
-    if (saved === 0) {
+    if (saved + merged === 0) {
       const message = lastError ?? 'The AI returned no items.'
       const dump = finish({ status: 'failed', error: message })
       yield { type: 'error', message, dump }
@@ -206,11 +247,11 @@ export async function* organizeDump(
 
     if (lastError) yield { type: 'warning', message: `${lastError} The items that arrived were kept.` }
     const dump = finish({ status: 'done', error: null })
-    if (dump) yield { type: 'done', dump }
+    if (dump) yield { type: 'done', dump, merged }
   } finally {
     // The client can disconnect at any yield. Never leave a dump in "processing".
     if (!finalPatch) {
-      updateDump(db, args.dumpId, { modelUsed, status: saved > 0 ? 'done' : 'cancelled' })
+      updateDump(db, args.dumpId, { modelUsed, status: saved + merged > 0 ? 'done' : 'cancelled' })
     }
   }
 }

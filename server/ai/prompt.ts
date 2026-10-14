@@ -26,6 +26,7 @@ export const SYSTEM_PROMPT = `You are Sift. You turn a messy brain dump into cle
 9. quote: the exact words in the dump that the item comes from, copied character for character, at most 120 characters. Do not translate or correct the quote.
 10. subtasks: only for a task that clearly needs several steps: 2 to 6 short steps that start with a verb. Otherwise [].
 11. Output the items in priority order, high first.
+12. "Existing open items" lists items that the user already has, with a reference like "#3". When a thought in the dump repeats, continues or changes one of them, do NOT create a new item. Output an update line for it instead, with only the fields that change (a new priority, a stated date, extra details, more tags). If nothing changes, output no line for it.
 
 ## Output format
 Output JSON Lines: one compact JSON object on each line. No markdown, no code fences, no comments, no text before or after the lines.
@@ -33,9 +34,14 @@ The first line describes the whole dump:
 {"kind":"meta","title":"<a 3 to 6 word title>","summary":"<one sentence that summarizes the dump>"}
 Each next line is one item:
 {"kind":"item","type":"task|idea|reminder|question","title":"...","details":"..." or null,"priority":"high|medium|low","due":{"date":"YYYY-MM-DD","time":"HH:mm" or null,"source":"stated|suggested"} or null,"tags":["..."],"quote":"...","subtasks":["..."]}
+An update of an existing item (rule 12) uses its reference and only the changed fields:
+{"kind":"update","ref":"#3","priority":"high","details":"...","due":{"date":"YYYY-MM-DD","time":null,"source":"stated"},"tags":["..."],"quote":"..."}
 
 ## Example
 Today: Monday 2025-03-03, 09:30 (Europe/London). Existing tags: work, health.
+Existing open items:
+#1 task: Call the dentist (medium, due 2025-03-06)
+#2 idea: Learn to bake bread (low)
 Date guide: today = 2025-03-03 (Monday); tomorrow = 2025-03-04; next Tuesday = 2025-03-04; next Wednesday = 2025-03-05; next Thursday = 2025-03-06; next Friday = 2025-03-07; next Saturday = 2025-03-08; next Sunday = 2025-03-09; next Monday = 2025-03-10; next week (Monday) = 2025-03-10; in 2 weeks = 2025-03-17.
 Brain dump:
 """
@@ -43,7 +49,7 @@ ugh tooth still hurts need to call dentist. rent due on the 1st!! maybe a podcas
 """
 Output:
 {"kind":"meta","title":"Dentist, rent and work","summary":"A sore tooth, rent on the 1st, a budget question for Sam, CI and docs work, and a podcast idea."}
-{"kind":"item","type":"task","title":"Call the dentist about the sore tooth","details":null,"priority":"high","due":{"date":"2025-03-04","time":null,"source":"suggested"},"tags":["health"],"quote":"tooth still hurts need to call dentist","subtasks":[]}
+{"kind":"update","ref":"#1","priority":"high","details":"The tooth still hurts.","quote":"tooth still hurts need to call dentist"}
 {"kind":"item","type":"reminder","title":"Pay the rent","details":null,"priority":"high","due":{"date":"2025-04-01","time":null,"source":"stated"},"tags":["money"],"quote":"rent due on the 1st!!","subtasks":[]}
 {"kind":"item","type":"question","title":"Ask Sam about the Q4 budget?","details":"Ask before Friday.","priority":"medium","due":{"date":"2025-03-07","time":null,"source":"stated"},"tags":["work"],"quote":"should i ask sam about the q4 budget before friday?","subtasks":[]}
 {"kind":"item","type":"task","title":"Fix the flaky CI test","details":null,"priority":"medium","due":{"date":"2025-03-06","time":null,"source":"suggested"},"tags":["work"],"quote":"fix the flaky CI test","subtasks":["Find the failing test in recent CI runs","Reproduce the failure locally","Fix the cause and re-run CI"]}
@@ -69,19 +75,35 @@ export function dateGuide(local: LocalNow): string {
   return lines.join('; ')
 }
 
+export type ExistingItemRef = {
+  ref: string
+  type: string
+  title: string
+  priority: string
+  dueDate: string | null
+}
+
 export function buildMessages(args: {
   text: string
   local: LocalNow
   existingTags: string[]
+  existingItems?: ExistingItemRef[]
 }): ChatMessage[] {
-  const { text, local, existingTags } = args
+  const { text, local, existingTags, existingItems = [] } = args
   const tags = existingTags.length ? existingTags.slice(0, 60).join(', ') : 'none'
+  const items = existingItems.length
+    ? existingItems
+        .map((i) => `${i.ref} ${i.type}: ${i.title.slice(0, 90)} (${i.priority}${i.dueDate ? `, due ${i.dueDate}` : ''})`)
+        .join('\n')
+    : 'none'
   return [
     { role: 'system', content: SYSTEM_PROMPT },
     {
       role: 'user',
       content: `Today: ${local.weekday} ${local.date}, ${local.time} (${local.timeZone}). Existing tags: ${tags}.
 Date guide: ${dateGuide(local)}.
+Existing open items:
+${items}
 Brain dump:
 """
 ${text}

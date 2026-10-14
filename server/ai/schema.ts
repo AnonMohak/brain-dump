@@ -50,8 +50,20 @@ export const aiItemLineSchema = z.object({
     .default([]),
 })
 
-export const aiLineSchema = z.discriminatedUnion('kind', [aiMetaLineSchema, aiItemLineSchema])
+/** A change to an item that the user already has (prompt rule 12). */
+export const aiUpdateLineSchema = z.object({
+  kind: z.literal('update'),
+  ref: z.preprocess((v) => (typeof v === 'number' ? `#${v}` : v), z.string().regex(/^#?\d+$/)),
+  title: z.preprocess(emptyToNull, z.string().trim().min(1).max(MAX_TITLE_CHARS).nullable()).catch(null).default(null),
+  details: z.preprocess(emptyToNull, z.string().trim().max(MAX_DETAILS_CHARS).nullable()).catch(null).default(null),
+  priority: z.preprocess(lower, prioritySchema.nullable()).catch(null).default(null),
+  due: aiDueSchema,
+  tags: z.array(z.string()).catch([]).default([]),
+})
+
+export const aiLineSchema = z.discriminatedUnion('kind', [aiMetaLineSchema, aiItemLineSchema, aiUpdateLineSchema])
 
 export type AiMetaLine = z.infer<typeof aiMetaLineSchema>
 export type AiItemLine = z.infer<typeof aiItemLineSchema>
+export type AiUpdateLine = z.infer<typeof aiUpdateLineSchema>
 export type AiLine = z.infer<typeof aiLineSchema>
