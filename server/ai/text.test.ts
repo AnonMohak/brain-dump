@@ -62,3 +62,16 @@ describe('POST /api/ai/text', () => {
     expect(res.data.error).toContain('question')
   })
 })
+
+test('ask sends the question and includes done items', async () => {
+  const fake = fakeFetch(() => streamResponse(['- **Old finished thing** — done.']))
+  const app = makeTestApp({ env: { OPENROUTER_API_KEY: 'sk-or-test' }, fetch: fake.fetch })
+  const done = await app.call('POST', '/api/items', { type: 'task', title: 'Old finished thing' })
+  await app.call('PATCH', `/api/items/${done.data.id}`, { status: 'done' })
+  const { text } = await postText(app, { mode: 'ask', question: 'What did I finish?' })
+  expect(text).toBe('- **Old finished thing** — done.')
+  const user = fake.calls[0].messages[1].content
+  expect(fake.calls[0].messages[0].content).toContain("Answer the user's question")
+  expect(user).toContain('- Old finished thing (task, medium, done)')
+  expect(user).toContain('Question: What did I finish?')
+})

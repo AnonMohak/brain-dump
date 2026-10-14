@@ -19,6 +19,7 @@ import { ItemEditor, type EditorTarget } from '@/components/item-editor'
 import { ShortcutsDialog } from '@/components/shortcuts-dialog'
 import { TodayPanel } from '@/components/today-panel'
 import { PlanDialog } from '@/components/ai-answer-dialog'
+import { AskDialog } from '@/components/ask-dialog'
 import { Welcome } from '@/components/welcome'
 import { LoginScreen } from '@/components/login-screen'
 import { useDumps, useHealth, useItems, useSession } from '@/hooks/use-data'
@@ -75,6 +76,7 @@ function Workspace() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
+  const [askOpen, setAskOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const organizer = useOrganize()
@@ -103,6 +105,9 @@ ${extra}` : extra)),
       } else if (e.key === '/') {
         e.preventDefault()
         searchRef.current?.focus()
+      } else if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault()
+        setAskOpen(true)
       } else if (e.key === '?') {
         e.preventDefault()
         setShortcutsOpen(true)
@@ -198,6 +203,11 @@ ${extra}` : extra)),
           >
             <Search /> <Kbd>{/mac/i.test(navigator.platform) ? '⌘' : 'Ctrl'} K</Kbd>
           </Button>
+          {health.data?.aiConfigured && (
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setAskOpen(true)}>
+              <Sparkles /> <span className="hidden sm:inline">Ask</span>
+            </Button>
+          )}
           <ExportMenu count={visibleItems.length} onExport={onExport} />
           <DumpsSheet
             open={dumpsOpen}
@@ -266,6 +276,7 @@ ${extra}` : extra)),
           }
         />
         <PlanDialog open={planOpen} onOpenChange={setPlanOpen} />
+        <AskDialog open={askOpen} onOpenChange={setAskOpen} />
 
         {items.isSuccess && allItems.length === 0 && !organizer.busy ? (
           <Welcome
@@ -304,6 +315,8 @@ ${extra}` : extra)),
           onOpenItem={onEdit}
           onOpenDumps={() => setDumpsOpen(true)}
           onOpenShortcuts={() => setShortcutsOpen(true)}
+          onAsk={() => setAskOpen(true)}
+          onPlan={() => setPlanOpen(true)}
         />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </main>

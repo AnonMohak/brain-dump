@@ -4,6 +4,7 @@ import type { Item, UpdateItemInput } from '@shared/schemas'
 export const SHORTCUTS: { group: string; keys: string[]; label: string }[] = [
   { group: 'Anywhere', keys: ['N'], label: 'Write a new dump' },
   { group: 'Anywhere', keys: ['/'], label: 'Search items' },
+  { group: 'Anywhere', keys: ['A'], label: 'Ask your board (AI)' },
   { group: 'Anywhere', keys: ['Ctrl', 'K'], label: 'Command palette' },
   { group: 'Anywhere', keys: ['Ctrl', 'Enter'], label: 'Organize the dump (in the input)' },
   { group: 'Anywhere', keys: ['?'], label: 'Show these shortcuts' },

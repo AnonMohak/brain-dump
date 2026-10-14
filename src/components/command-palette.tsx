@@ -8,6 +8,8 @@ import {
   FilterX,
   History,
   Keyboard,
+  MessageCircleQuestion,
+  Sparkles,
   Monitor,
   Moon,
   PenLine,
@@ -42,6 +44,8 @@ type CommandPaletteProps = {
   onOpenItem: (item: Item) => void
   onOpenDumps: () => void
   onOpenShortcuts: () => void
+  onAsk: () => void
+  onPlan: () => void
 }
 
 export function CommandPalette({
@@ -57,6 +61,8 @@ export function CommandPalette({
   onOpenItem,
   onOpenDumps,
   onOpenShortcuts,
+  onAsk,
+  onPlan,
 }: CommandPaletteProps) {
   const { setTheme } = useTheme()
   const run = (action: () => void) => () => {
@@ -74,6 +80,13 @@ export function CommandPalette({
         <CommandGroup heading="Actions">
           <CommandItem onSelect={run(onNewDump)}>
             <PenLine /> New dump
+          </CommandItem>
+          <CommandItem onSelect={run(onAsk)}>
+            <MessageCircleQuestion /> Ask your board
+            <CommandShortcut>A</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={run(onPlan)}>
+            <Sparkles /> Plan my day
           </CommandItem>
           <CommandItem onSelect={run(() => onExport('md'))}>
             <FileText /> Export view as Markdown

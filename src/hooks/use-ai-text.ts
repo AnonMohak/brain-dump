@@ -1,5 +1,5 @@
 import type { TextEvent, TextMode } from '@shared/events'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { postStream } from '@/lib/sse'
 
 export type AiTextState = {
@@ -47,6 +47,9 @@ export function useAiText() {
       setState((s) => (s.phase === 'thinking' || s.phase === 'writing' ? { ...s, phase: 'done' } : s))
     }
   }, [])
+
+  // Stop the stream when the component goes away.
+  useEffect(() => () => controllerRef.current?.abort(), [])
 
   const reset = useCallback(() => {
     controllerRef.current?.abort()
