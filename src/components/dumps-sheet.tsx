@@ -33,11 +33,13 @@ type DumpsSheetProps = {
   busy: boolean
   onShow: (dumpId: string) => void
   onRerun: (dumpId: string) => void
+  /** Done and total item counts per dump, from the board. */
+  progress: Map<string, { done: number; total: number }>
 }
 
 type Confirm = { kind: 'rerun' | 'delete'; dump: Dump } | null
 
-export function DumpsSheet({ open, onOpenChange, dumps, activeDumpId, busy, onShow, onRerun }: DumpsSheetProps) {
+export function DumpsSheet({ open, onOpenChange, dumps, activeDumpId, busy, onShow, onRerun, progress }: DumpsSheetProps) {
   const [confirm, setConfirm] = useState<Confirm>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const deleteDump = useDeleteDump()
@@ -68,6 +70,7 @@ export function DumpsSheet({ open, onOpenChange, dumps, activeDumpId, busy, onSh
               {dumps.map((dump) => {
                 const working = dump.id === activeDumpId && busy
                 const isOpen = expanded === dump.id
+                const stats = progress.get(dump.id)
                 return (
                   <li key={dump.id} className="rounded-lg border bg-card p-3">
                     <div className="flex items-start gap-2">
@@ -95,6 +98,26 @@ export function DumpsSheet({ open, onOpenChange, dumps, activeDumpId, busy, onSh
                     </div>
 
                     {dump.summary && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{dump.summary}</p>}
+                    {stats && stats.total > 0 && (
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <div
+                          className="h-1 flex-1 overflow-hidden rounded-full bg-muted"
+                          role="progressbar"
+                          aria-label="Items done"
+                          aria-valuemin={0}
+                          aria-valuemax={stats.total}
+                          aria-valuenow={stats.done}
+                        >
+                          <div
+                            className="h-full rounded-full bg-primary transition-[width] duration-500"
+                            style={{ width: `${(100 * stats.done) / stats.total}%` }}
+                          />
+                        </div>
+                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                          {stats.done === stats.total ? 'All done' : `${stats.done} of ${stats.total} done`}
+                        </span>
+                      </div>
+                    )}
                     {dump.error && <p className="mt-2 text-xs text-destructive">{dump.error}</p>}
 
                     <button

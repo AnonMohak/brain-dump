@@ -127,6 +127,17 @@ ${extra}` : extra)),
   const allItems = useMemo(() => items.data ?? [], [items.data])
   const visibleItems = useMemo(() => applyFilters(allItems, filters), [allItems, filters])
   const tags = useMemo(() => allTags(allItems), [allItems])
+  const dumpProgress = useMemo(() => {
+    const map = new Map<string, { done: number; total: number }>()
+    for (const item of allItems) {
+      if (!item.dumpId) continue
+      const entry = map.get(item.dumpId) ?? { done: 0, total: 0 }
+      entry.total++
+      if (item.status === 'done') entry.done++
+      map.set(item.dumpId, entry)
+    }
+    return map
+  }, [allItems])
   const archivedCount = useMemo(() => allItems.filter((item) => isArchived(item)).length, [allItems])
   const urgentCount = useMemo(
     () => allItems.filter((item) => isUrgent(item)).length,
@@ -194,6 +205,7 @@ ${extra}` : extra)),
             busy={organizer.busy}
             onShow={(dumpId) => setFilters({ dump: dumpId })}
             onRerun={onRerun}
+            progress={dumpProgress}
           />
           </>
         }
