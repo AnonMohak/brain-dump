@@ -7,7 +7,7 @@ import { validate } from './validate'
 
 const COOKIE = 'sift_session'
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30
-const PUBLIC_PATHS = new Set(['/api/health', '/api/session', '/api/login', '/api/logout'])
+const PUBLIC_PATHS = new Set(['/api/health', '/api/session', '/api/login', '/api/logout', '/api/google/callback'])
 
 /** A stateless session token. A new password makes all old sessions invalid. */
 function sessionToken(password: string): string {

@@ -24,6 +24,13 @@ const envSchema = z.object({
     emptyToUndefined,
     z.enum(['none', 'low', 'medium', 'high']).default('none'),
   ),
+  // Google Calendar sync (optional). An OAuth client of type "Desktop app".
+  GOOGLE_CLIENT_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+  GOOGLE_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+  /** Only needed when Sift runs online: the HTTPS callback URL of a "Web application" client. */
+  GOOGLE_REDIRECT_URI: z.preprocess(emptyToUndefined, z.url().optional()),
+  /** Popup reminder before timed events, in minutes. 0 turns it off. */
+  GOOGLE_REMINDER_MINUTES: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(40320).default(15)),
   HOST: z.preprocess(emptyToUndefined, z.string().default('127.0.0.1')),
   PORT: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().default(3001)),
   DATABASE_PATH: z.preprocess(emptyToUndefined, z.string().default('./data/sift.db')),

@@ -13,6 +13,7 @@ import {
   type DumpPatch,
 } from '../db/repo'
 import type { Env } from '../env'
+import type { CalendarHooks } from '../google/hooks'
 import { createObjectScanner, tryParseJson } from './json-stream'
 import { normalizeItem, normalizeUpdate, parseAiObject, type NormalizeContext } from './normalize'
 import { AiError, PROVIDER_NAME } from './chat-stream'
@@ -41,6 +42,7 @@ export type OrganizeDeps = {
   env: Env
   fetch?: typeof fetch
   timeouts?: Partial<AiTimeouts>
+  calendar?: CalendarHooks
 }
 
 export type OrganizeArgs = {
@@ -199,6 +201,7 @@ export async function* organizeDump(
                 if (!item) continue
                 merged++
                 refs.delete(line.ref) // one update per item
+                deps.calendar?.itemsChanged([item.id])
                 yield { type: 'update', item }
                 continue
               }
@@ -206,6 +209,7 @@ export async function* organizeDump(
               if (!data) continue
               const item = createItem(db, { ...data, position: basePosition + saved })
               saved++
+              deps.calendar?.itemsChanged([item.id])
               yield { type: 'item', item }
             }
           }

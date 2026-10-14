@@ -25,6 +25,15 @@ const json = (body: unknown) => JSON.stringify(body)
 
 export type Health = { ok: boolean; aiConfigured: boolean; model: string | null; models: string[] }
 export type Session = { required: boolean; authenticated: boolean }
+export type GoogleStatus = {
+  configured: boolean
+  connected: boolean
+  calendarName: string
+  timeZone: string | null
+  lastSyncAt: string | null
+  lastError: string | null
+  syncedItems: number
+}
 
 export const api = {
   health: () => request<Health>('/health'),
@@ -41,6 +50,10 @@ export const api = {
 
   dumps: () => request<Dump[]>('/dumps'),
   deleteDump: (id: string) => request<void>(`/dumps/${id}`, { method: 'DELETE' }),
+  googleStatus: () => request<GoogleStatus>('/google/status'),
+  googleSync: () =>
+    request<{ created: number; updated: number; removed: number; status: GoogleStatus }>('/google/sync', { method: 'POST' }),
+  googleDisconnect: () => request<GoogleStatus>('/google/disconnect', { method: 'POST' }),
   importJson: (data: unknown) =>
     request<{ dumps: number; items: number; skipped: number }>('/import', { method: 'POST', body: json(data) }),
 }

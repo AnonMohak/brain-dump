@@ -103,6 +103,8 @@ export const itemSchema = z.object({
   recurrence: recurrenceSchema.nullable(),
   /** Only for a weekly repeat, e.g. ["mon", "wed", "fri"]. Null means "the weekday of the due date". */
   repeatDays: z.array(weekdaySchema).nullable(),
+  /** Set when the item has an event in the "Sift" Google calendar. */
+  googleEventId: z.string().nullable(),
   tags: z.array(z.string()),
   sourceQuote: z.string().nullable(),
   status: itemStatusSchema,

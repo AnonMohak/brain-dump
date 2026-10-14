@@ -8,6 +8,8 @@ import type { Env } from './env'
 import { aiRoutes } from './routes/ai'
 import { dumpRoutes } from './routes/dumps'
 import { importRoutes } from './routes/import'
+import { googleRoutes } from './routes/google'
+import { CalendarSync } from './google/sync'
 import { itemRoutes } from './routes/items'
 
 export type AppDeps = {
@@ -16,10 +18,13 @@ export type AppDeps = {
   /** Tests inject this to fake OpenRouter. */
   fetch?: typeof fetch
   aiTimeouts?: Partial<AiTimeouts>
+  /** Tests inject a fake Google API through its own fetch. */
+  calendarSync?: CalendarSync
 }
 
-export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
+export function createApp({ env, db, fetch, aiTimeouts, calendarSync }: AppDeps) {
   const app = new Hono()
+  const calendar = calendarSync ?? new CalendarSync({ db, env })
 
   const api = new Hono()
     .use('*', (c, next) =>
@@ -37,10 +42,11 @@ export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
       })
     })
     .route('/', authRoutes(env))
-    .route('/items', itemRoutes(db))
-    .route('/dumps', dumpRoutes({ db, env, fetch, timeouts: aiTimeouts }))
+    .route('/items', itemRoutes(db, calendar))
+    .route('/dumps', dumpRoutes({ db, env, fetch, timeouts: aiTimeouts, calendar }))
     .route('/ai', aiRoutes({ db, env, fetch, timeouts: aiTimeouts }))
-    .route('/import', importRoutes(db))
+    .route('/import', importRoutes(db, () => void calendar.syncAll().catch(() => {})))
+    .route('/google', googleRoutes({ env, sync: calendar, fetch }))
 
   app.route('/api', api)
   app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))

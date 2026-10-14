@@ -4,6 +4,7 @@ import { ITEM_TYPES, PRIORITIES, type Item, type Priority, type UpdateItemInput 
 import {
   ArrowRightLeft,
   AlarmClockPlus,
+  CalendarCheck2,
   CalendarDays,
   Flag,
   ListChecks,
@@ -169,6 +170,16 @@ export const ItemCard = memo(function ItemCard({
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 compact:mt-1">
             <PriorityLabel priority={item.priority} />
             <DueBadge item={item} />
+            {item.googleEventId && item.dueDate && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex h-5 items-center text-muted-foreground">
+                    <CalendarCheck2 className="size-3.5" aria-label="In Google Calendar" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>In your "Sift" Google calendar</TooltipContent>
+              </Tooltip>
+            )}
             {item.recurrence && item.dueDate && (
               <Tooltip>
                 <TooltipTrigger asChild>

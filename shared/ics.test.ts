@@ -4,7 +4,7 @@ import type { Item } from './schemas'
 
 const base: Item = {
   id: 'x', dumpId: null, type: 'task', title: 'T', details: null, priority: 'medium',
-  dueDate: null, dueTime: null, dueSource: null, recurrence: null, repeatDays: null, tags: [], sourceQuote: null,
+  dueDate: null, dueTime: null, dueSource: null, recurrence: null, repeatDays: null, googleEventId: null, tags: [], sourceQuote: null,
   status: 'open', position: 0, subtasks: [], createdAt: '', updatedAt: '', completedAt: null,
 }
 const at = new Date('2026-10-14T08:30:00Z')

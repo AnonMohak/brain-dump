@@ -11,6 +11,7 @@ const base: Omit<Item, 'id' | 'type' | 'title' | 'priority' | 'position'> = {
   dueSource: null,
   recurrence: null,
   repeatDays: null,
+  googleEventId: null,
   tags: [],
   sourceQuote: null,
   status: 'open',

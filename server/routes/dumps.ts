@@ -8,6 +8,7 @@ import {
   deleteDumpItems,
   getDump,
   listDumps,
+  listItems,
   updateDump,
 } from '../db/repo'
 import { validate } from '../validate'
@@ -78,6 +79,7 @@ export function dumpRoutes(deps: OrganizeDeps) {
       if (!dump) return c.json({ error: 'Dump not found' }, 404)
       if (activeDumps.has(id)) return c.json({ error: 'The AI is still working on this dump' }, 409)
 
+      deps.calendar?.eventsOrphaned(listItems(db).filter((i) => i.dumpId === id).map((i) => i.googleEventId))
       deleteDumpItems(db, id)
       updateDump(db, id, {
         status: 'processing',
@@ -92,6 +94,9 @@ export function dumpRoutes(deps: OrganizeDeps) {
     .delete('/:id', (c) => {
       const id = c.req.param('id')
       if (activeDumps.has(id)) return c.json({ error: 'The AI is still working on this dump' }, 409)
-      return deleteDump(db, id) ? c.body(null, 204) : c.json({ error: 'Dump not found' }, 404)
+      const eventIds = listItems(db).filter((i) => i.dumpId === id).map((i) => i.googleEventId)
+      if (!deleteDump(db, id)) return c.json({ error: 'Dump not found' }, 404)
+      deps.calendar?.eventsOrphaned(eventIds)
+      return c.body(null, 204)
     })
 }

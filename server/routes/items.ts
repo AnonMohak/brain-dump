@@ -1,10 +1,11 @@
 import { Hono } from 'hono'
 import { createItemInputSchema, updateItemInputSchema } from '../../shared/schemas'
 import type { Db } from '../db/client'
-import { createItem, deleteItem, listItems, topPosition, updateItem } from '../db/repo'
+import { createItem, deleteItem, getItem, listItems, topPosition, updateItem } from '../db/repo'
+import { NO_CALENDAR, type CalendarHooks } from '../google/hooks'
 import { validate } from '../validate'
 
-export function itemRoutes(db: Db) {
+export function itemRoutes(db: Db, calendar: CalendarHooks = NO_CALENDAR) {
   return new Hono()
     .get('/', (c) => c.json(listItems(db)))
     .post('/', validate('json', createItemInputSchema), (c) => {
@@ -26,13 +27,18 @@ export function itemRoutes(db: Db) {
         position: topPosition(db, input.type) - 1,
         subtasks: input.subtasks,
       })
+      calendar.itemsChanged([item.id])
       return c.json(item, 201)
     })
     .patch('/:id', validate('json', updateItemInputSchema), (c) => {
       const item = updateItem(db, c.req.param('id'), c.req.valid('json'))
+      if (item) calendar.itemsChanged([item.id])
       return item ? c.json(item) : c.json({ error: 'Item not found' }, 404)
     })
-    .delete('/:id', (c) =>
-      deleteItem(db, c.req.param('id')) ? c.body(null, 204) : c.json({ error: 'Item not found' }, 404),
-    )
+    .delete('/:id', (c) => {
+      const eventId = getItem(db, c.req.param('id'))?.googleEventId ?? null
+      if (!deleteItem(db, c.req.param('id'))) return c.json({ error: 'Item not found' }, 404)
+      calendar.eventsOrphaned([eventId])
+      return c.body(null, 204)
+    })
 }

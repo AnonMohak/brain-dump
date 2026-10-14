@@ -136,6 +136,7 @@ export const importJsonSchema = z.object({
       itemSchema.extend({
         recurrence: recurrenceSchema.nullable().default(null),
         repeatDays: itemSchema.shape.repeatDays.default(null),
+        googleEventId: itemSchema.shape.googleEventId.default(null),
       }),
     )
     .max(20000),

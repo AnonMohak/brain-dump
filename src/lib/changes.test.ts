@@ -4,7 +4,7 @@ import { describeChange, inversePatch } from './changes'
 
 const item: Item = {
   id: 'a', dumpId: null, type: 'task', title: 'Call mom', details: null, priority: 'medium',
-  dueDate: '2026-10-15', dueTime: '17:00', dueSource: 'suggested', recurrence: null, repeatDays: null, tags: ['family'], sourceQuote: null,
+  dueDate: '2026-10-15', dueTime: '17:00', dueSource: 'suggested', recurrence: null, repeatDays: null, googleEventId: null, tags: ['family'], sourceQuote: null,
   status: 'open', position: 3, subtasks: [{ id: 's1', text: 'Find number', done: false, position: 0 }],
   createdAt: '', updatedAt: '', completedAt: null,
 }

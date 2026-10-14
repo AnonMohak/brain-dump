@@ -27,6 +27,7 @@ function makeItem(fields: Partial<Item> = {}): Item {
     dueSource: null,
     recurrence: null,
     repeatDays: null,
+    googleEventId: null,
     tags: [],
     sourceQuote: null,
     status: 'open',

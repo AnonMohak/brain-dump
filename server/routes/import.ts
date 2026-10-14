@@ -28,7 +28,12 @@ export function importData(db: Db, data: ImportJson): ImportResult {
     const newItems = data.items.filter((i) => !existingItems.has(i.id))
     for (const { subtasks: steps, ...item } of newItems) {
       tx.insert(items)
-        .values({ ...item, dumpId: item.dumpId && knownDumps.has(item.dumpId) ? item.dumpId : null })
+        .values({
+          ...item,
+          dumpId: item.dumpId && knownDumps.has(item.dumpId) ? item.dumpId : null,
+          // Events belong to the calendar of the export, not to this one.
+          googleEventId: null,
+        })
         .run()
       steps.forEach((step, index) => {
         tx.insert(subtasks)
@@ -45,6 +50,10 @@ export function importData(db: Db, data: ImportJson): ImportResult {
   })
 }
 
-export function importRoutes(db: Db) {
-  return new Hono().post('/', validate('json', importJsonSchema), (c) => c.json(importData(db, c.req.valid('json'))))
+export function importRoutes(db: Db, onImported: () => void = () => {}) {
+  return new Hono().post('/', validate('json', importJsonSchema), (c) => {
+    const result = importData(db, c.req.valid('json'))
+    if (result.items > 0) onImported()
+    return c.json(result)
+  })
 }

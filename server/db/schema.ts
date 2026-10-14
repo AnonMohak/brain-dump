@@ -39,6 +39,8 @@ export const items = sqliteTable(
     recurrence: text('recurrence', { enum: RECURRENCES }),
     // Weekdays of a weekly repeat, e.g. ["mon","wed","fri"].
     repeatDays: text('repeat_days', { mode: 'json' }).$type<Weekday[]>(),
+    // The Google Calendar event of this item, when calendar sync is on.
+    googleEventId: text('google_event_id'),
     tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
     sourceQuote: text('source_quote'),
     status: text('status', { enum: ITEM_STATUSES }).notNull().default('open'),
@@ -50,6 +52,13 @@ export const items = sqliteTable(
   },
   (t) => [index('items_dump_id_idx').on(t.dumpId)],
 )
+
+/** Small key/value settings of the server (for example the Google sign-in). Never sent to the browser as is. */
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
 
 export const subtasks = sqliteTable(
   'subtasks',

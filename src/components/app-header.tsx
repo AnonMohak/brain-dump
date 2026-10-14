@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { Logo } from './logo'
+import { GoogleCalendarMenu } from './google-calendar-menu'
 import { ThemeToggle } from './theme-toggle'
 
 type AppHeaderProps = {
@@ -44,6 +45,7 @@ export function AppHeader({ urgentCount, onUrgentClick, urgentActive, actions }:
 
         <div className="ml-auto flex items-center gap-1">
           {actions}
+          <GoogleCalendarMenu />
           <ThemeToggle />
         </div>
       </div>

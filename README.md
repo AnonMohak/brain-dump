@@ -93,3 +93,20 @@ Set `HOST=0.0.0.0`, choose a `PORT`, set `APP_PASSWORD`, then run `bun run build
 ## Install as an app
 
 In production (`bun run build && bun run start`), Sift is a Progressive Web App. In Chrome or Edge, use the install icon in the address bar (or "Install Sift" in the menu). The app shell then opens offline too; your items still come from the Sift server.
+
+## Google Calendar sync
+
+Sift can keep a calendar called "Sift" in your Google Calendar up to date: open items with a date become events (all-day or timed, with repeats), done items leave the calendar, and every edit, snooze or drag updates the event. The Google Calendar app then reminds you on your phone (timed events: a popup `GOOGLE_REMINDER_MINUTES` before).
+
+Sift asks only for the `calendar.app.created` permission: it can create its own calendar and manage events there, and it cannot see your other calendars.
+
+Setup (once, free):
+
+1. Open <https://console.cloud.google.com/>, create a project (for example "Sift").
+2. APIs & Services → Library → enable **Google Calendar API**.
+3. APIs & Services → OAuth consent screen (Google Auth Platform): User type **External**, fill in the app name and your email. Under **Audience**, add your Google account as a **test user**. (Testing mode is fine for personal use.)
+4. APIs & Services → Credentials → **Create credentials → OAuth client ID** → Application type **Desktop app**. Copy the client ID and the client secret.
+5. Put them in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then restart `bun run dev`.
+6. In Sift, open the calendar menu in the header → **Connect Google Calendar**, sign in and allow access.
+
+The sign-in is saved in the local database (`data/`, ignored by git). "Disconnect" in the same menu signs out; the "Sift" calendar and its events stay in Google Calendar until you delete them there. In testing mode Google may ask you to sign in again after 7 days; then use Disconnect and Connect.
