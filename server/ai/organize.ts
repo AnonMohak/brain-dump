@@ -1,5 +1,5 @@
 import { localNow } from '../../shared/dates'
-import type { Dump, Item } from '../../shared/schemas'
+import type { OrganizeEvent } from '../../shared/events'
 import type { Db } from '../db/client'
 import {
   createItem,
@@ -15,13 +15,7 @@ import { normalizeItem, parseAiObject, type NormalizeContext } from './normalize
 import { OpenRouterError, streamChat } from './openrouter'
 import { buildMessages } from './prompt'
 
-export type OrganizeEvent =
-  | { type: 'status'; phase: 'thinking' | 'writing'; model: string | null }
-  | { type: 'meta'; title: string; summary: string }
-  | { type: 'item'; item: Item }
-  | { type: 'warning'; message: string }
-  | { type: 'done'; dump: Dump }
-  | { type: 'error'; message: string; dump: Dump | null }
+export type { OrganizeEvent }
 
 export type AiTimeouts = {
   /** Wait this long for the first chunk of an answer. */
