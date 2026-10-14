@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { addDays, daysBetween, dueState, formatDue, localNow, safeTimeZone } from './dates'
+import { addDays, daysBetween, dueState, formatDue, localNow, safeTimeZone, snoozeTargets } from './dates'
 
 describe('localNow', () => {
   test('gives the date and weekday in the user time zone', () => {
@@ -64,5 +64,24 @@ describe('formatDue', () => {
   test('uses month and day further away', () => {
     expect(formatDue('2026-11-01', null, now)).toBe('Nov 1')
     expect(formatDue('2027-01-05', null, now)).toBe('Jan 5, 2027')
+  })
+})
+
+describe('snoozeTargets', () => {
+  const pick = (now: Date) => Object.fromEntries(snoozeTargets(now).map((t) => [t.key, t.date]))
+
+  test('from a Wednesday', () => {
+    expect(pick(new Date(2026, 9, 14, 9))).toEqual({
+      tomorrow: '2026-10-15',
+      weekend: '2026-10-17',
+      'next-week': '2026-10-19',
+      'two-weeks': '2026-10-28',
+    })
+  })
+
+  test('from a Saturday and a Sunday, the weekend is the next one', () => {
+    expect(pick(new Date(2026, 9, 17, 9)).weekend).toBe('2026-10-24')
+    expect(pick(new Date(2026, 9, 18, 9)).weekend).toBe('2026-10-24')
+    expect(pick(new Date(2026, 9, 18, 9))['next-week']).toBe('2026-10-19')
   })
 })

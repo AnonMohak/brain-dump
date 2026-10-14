@@ -103,3 +103,19 @@ export function formatDue(dueDate: string, dueTime: string | null, now: Date = n
   else label = MONTH_DAY_YEAR.format(date)
   return dueTime ? `${label} ${dueTime}` : label
 }
+
+export type SnoozeTarget = { key: 'tomorrow' | 'weekend' | 'next-week' | 'two-weeks'; label: string; date: string }
+
+/** Quick dates for "Snooze", in the runtime's local time. */
+export function snoozeTargets(now: Date = new Date()): SnoozeTarget[] {
+  const today = toLocalIsoDate(now)
+  const day = now.getDay() // 0 = Sunday
+  const toSaturday = day === 6 ? 7 : (6 - day + 7) % 7 || 7
+  const toMonday = ((8 - day) % 7) || 7
+  return [
+    { key: 'tomorrow', label: 'Tomorrow', date: addDays(today, 1) },
+    { key: 'weekend', label: 'This weekend', date: addDays(today, day === 0 ? 6 : toSaturday) },
+    { key: 'next-week', label: 'Next week', date: addDays(today, toMonday) },
+    { key: 'two-weeks', label: 'In 2 weeks', date: addDays(today, 14) },
+  ]
+}

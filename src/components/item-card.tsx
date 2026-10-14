@@ -1,7 +1,8 @@
-import { dueState, formatDue } from '@shared/dates'
+import { dueMoment, dueState, formatDue, snoozeTargets } from '@shared/dates'
 import { ITEM_TYPES, PRIORITIES, type Item, type Priority, type UpdateItemInput } from '@shared/schemas'
 import {
   ArrowRightLeft,
+  AlarmClockPlus,
   CalendarDays,
   Flag,
   ListChecks,
@@ -20,6 +21,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -229,6 +231,36 @@ function ItemMenu({
           <DropdownMenuItem onSelect={onEdit}>
             <Pencil /> Edit
           </DropdownMenuItem>
+        )}
+        {item.status === 'open' && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <AlarmClockPlus /> Snooze
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-52">
+              {snoozeTargets().map((target) => (
+                <DropdownMenuItem
+                  key={target.key}
+                  onSelect={() => onUpdate({ dueDate: target.date, dueTime: null, dueSource: 'stated' })}
+                >
+                  {target.label}
+                  <DropdownMenuShortcut>
+                    {target.key === 'tomorrow'
+                      ? dueMoment(target.date, null).toLocaleDateString('en-US', { weekday: 'short' })
+                      : formatDue(target.date, null)}
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              ))}
+              {onEdit && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={onEdit}>
+                    <CalendarDays /> Pick a date…
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         )}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
