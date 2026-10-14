@@ -124,3 +124,17 @@ describe('normalizeItem', () => {
     expect(normalizeItem(item({ title: 'call the DENTIST' }), c)).toBeNull()
   })
 })
+
+describe('dateGuide', () => {
+  test('lists tomorrow, the next weekdays and next week', async () => {
+    const { dateGuide } = await import('./prompt')
+    const guide = dateGuide({ date: '2026-10-14', time: '09:00', weekday: 'Wednesday', timeZone: 'UTC' })
+    expect(guide).toContain('today = 2026-10-14 (Wednesday)')
+    expect(guide).toContain('tomorrow = 2026-10-15')
+    expect(guide).toContain('next Friday = 2026-10-16')
+    expect(guide).toContain('next Tuesday = 2026-10-20')
+    expect(guide).toContain('next Wednesday = 2026-10-21')
+    expect(guide).toContain('next week (Monday) = 2026-10-19')
+    expect(guide).toContain('in 2 weeks = 2026-10-28')
+  })
+})

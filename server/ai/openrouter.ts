@@ -27,7 +27,8 @@ export type ChatRequest = {
   /** The first model is the main one. OpenRouter tries the next ones when it fails. */
   models: string[]
   messages: ChatMessage[]
-  reasoningEffort: 'low' | 'medium' | 'high'
+  /** "none" turns reasoning off: much faster, slightly less careful. */
+  reasoningEffort: 'none' | 'low' | 'medium' | 'high'
   maxTokens?: number
   signal?: AbortSignal
   fetch?: typeof fetch
@@ -61,7 +62,7 @@ export async function* streamChat(req: ChatRequest): AsyncGenerator<StreamChunk>
     stream: true,
     temperature: 0.2,
     max_tokens: req.maxTokens ?? 24_000,
-    reasoning: { effort: req.reasoningEffort },
+    reasoning: req.reasoningEffort === 'none' ? { enabled: false } : { effort: req.reasoningEffort },
     ...req.extraBody,
   }
 

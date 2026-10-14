@@ -16,7 +16,7 @@ const envSchema = z.object({
   ),
   OPENROUTER_REASONING_EFFORT: z.preprocess(
     emptyToUndefined,
-    z.enum(['low', 'medium', 'high']).default('low'),
+    z.enum(['none', 'low', 'medium', 'high']).default('none'),
   ),
   HOST: z.preprocess(emptyToUndefined, z.string().default('127.0.0.1')),
   PORT: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().default(3001)),

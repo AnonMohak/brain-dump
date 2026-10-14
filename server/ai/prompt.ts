@@ -1,4 +1,4 @@
-import type { LocalNow } from '../../shared/dates'
+import { addDays, type LocalNow } from '../../shared/dates'
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
 
@@ -18,7 +18,7 @@ export const SYSTEM_PROMPT = `You are Sift. You turn a messy brain dump into cle
 5. details: useful extra context from the dump that does not fit in the title, else null.
 6. priority: "high" = urgent, or real consequences soon. "medium" = should happen this week, or it matters. "low" = nice to have, someday.
 7. due (in the user's time zone, see "Today" below):
-   - When the dump states or implies a date ("tomorrow", "by Friday", "on the 3rd", "next week", "tonight"), convert it to an absolute date and set "source":"stated". A weekday name means the next such day after today. "Next week" means the Monday of next week.
+   - When the dump states or implies a date ("tomorrow", "kal", "by Friday", "on the 3rd", "next week", "tonight"), convert it to an absolute date with the "Date guide" and set "source":"stated". A weekday name means the next such day after today. "Next week" means the Monday of next week.
    - Tasks and reminders ALWAYS get a due date. When the dump gives none, suggest a realistic date from the priority: high = today or tomorrow, medium = within 7 days, low = within 21 days. Set "source":"suggested". Never suggest a date in the past.
    - Ideas and questions get a due date only when the dump states one. Otherwise "due" is null.
    - "time" is "HH:mm" (24-hour clock) only when the dump states a clock time ("at 5pm" = "17:00"). Otherwise null.
@@ -36,6 +36,7 @@ Each next line is one item:
 
 ## Example
 Today: Monday 2025-03-03, 09:30 (Europe/London). Existing tags: work, health.
+Date guide: today = 2025-03-03 (Monday); tomorrow = 2025-03-04; next Tuesday = 2025-03-04; next Wednesday = 2025-03-05; next Thursday = 2025-03-06; next Friday = 2025-03-07; next Saturday = 2025-03-08; next Sunday = 2025-03-09; next Monday = 2025-03-10; next week (Monday) = 2025-03-10; in 2 weeks = 2025-03-17.
 Brain dump:
 """
 ugh tooth still hurts need to call dentist. rent due on the 1st!! maybe a podcast about dev tools someday. should i ask sam about the q4 budget before friday? also fix the flaky CI test and update the docs
@@ -49,6 +50,25 @@ Output:
 {"kind":"item","type":"task","title":"Update the docs","details":null,"priority":"low","due":{"date":"2025-03-14","time":null,"source":"suggested"},"tags":["work"],"quote":"update the docs","subtasks":[]}
 {"kind":"item","type":"idea","title":"Start a podcast about dev tools","details":null,"priority":"low","due":null,"tags":["side-project"],"quote":"maybe a podcast about dev tools someday","subtasks":[]}`
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/**
+ * A ready-made table of relative dates. Models without (or with little) reasoning
+ * make fewer date mistakes when they look dates up instead of counting days.
+ */
+export function dateGuide(local: LocalNow): string {
+  const today = new Date(`${local.date}T00:00:00Z`).getUTCDay()
+  const lines = [`today = ${local.date} (${local.weekday})`, `tomorrow = ${addDays(local.date, 1)}`]
+  for (let offset = 1; offset <= 7; offset++) {
+    const day = WEEKDAYS[(today + offset) % 7]
+    lines.push(`next ${day} = ${addDays(local.date, offset)}`)
+  }
+  const toMonday = ((8 - today) % 7) || 7
+  lines.push(`next week (Monday) = ${addDays(local.date, toMonday)}`)
+  lines.push(`in 2 weeks = ${addDays(local.date, 14)}`)
+  return lines.join('; ')
+}
+
 export function buildMessages(args: {
   text: string
   local: LocalNow
@@ -61,6 +81,7 @@ export function buildMessages(args: {
     {
       role: 'user',
       content: `Today: ${local.weekday} ${local.date}, ${local.time} (${local.timeZone}). Existing tags: ${tags}.
+Date guide: ${dateGuide(local)}.
 Brain dump:
 """
 ${text}

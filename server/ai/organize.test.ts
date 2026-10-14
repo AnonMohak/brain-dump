@@ -90,7 +90,7 @@ describe('POST /api/dumps', () => {
       model: ULTRA,
       models: [ULTRA, SUPER],
       stream: true,
-      reasoning: { effort: 'low' },
+      reasoning: { enabled: false },
     })
     expect(fake.calls[0].messages[1].content).toContain('Today: Wednesday 2026-10-14, 09:00 (UTC)')
     expect(fake.calls[0].messages[1].content).toContain(GOOD_DUMP)

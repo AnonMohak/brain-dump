@@ -37,7 +37,7 @@ Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM 
 | `OPENROUTER_API_KEY` | (empty) | Your OpenRouter key. Without it the app runs, but cannot sort. |
 | `OPENROUTER_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | The main model |
 | `OPENROUTER_FALLBACK_MODEL` | `nvidia/nemotron-3-super-120b-a12b:free` | Used when the main model is busy or fails |
-| `OPENROUTER_REASONING_EFFORT` | `low` | `low`, `medium` or `high`. Higher is slower. |
+| `OPENROUTER_REASONING_EFFORT` | `none` | `none` is fastest (first item in seconds). `low`, `medium`, `high` think first and can take 1 to 2 minutes. |
 | `HOST` | `127.0.0.1` | Keep this for local use, so other devices cannot use your key |
 | `PORT` | `3001` | API port (Vite forwards `/api` to it) |
 | `DATABASE_PATH` | `./data/sift.db` | SQLite file (git ignores `data/`) |
