@@ -16,6 +16,7 @@ import { Kbd } from '@/components/ui/kbd'
 import { DumpsSheet } from '@/components/dumps-sheet'
 import { FilterBar } from '@/components/filter-bar'
 import { ItemEditor, type EditorTarget } from '@/components/item-editor'
+import { ShortcutsDialog } from '@/components/shortcuts-dialog'
 import { LoginScreen } from '@/components/login-screen'
 import { useDumps, useHealth, useItems, useSession } from '@/hooks/use-data'
 import { useItemActions } from '@/hooks/use-item-actions'
@@ -24,6 +25,7 @@ import { useOrganize } from '@/hooks/use-organize'
 import { useSpeech } from '@/hooks/use-speech'
 import { downloadText } from '@/lib/download'
 import { EXAMPLE_DUMP } from '@/lib/example'
+import { isTyping } from '@/lib/shortcuts'
 import { isUrgent } from '@/lib/items'
 
 export default function App() {
@@ -69,7 +71,9 @@ function Workspace() {
   const [editor, setEditor] = useState<EditorTarget>(null)
   const [dumpsOpen, setDumpsOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
   const organizer = useOrganize()
   const actions = useItemActions()
   const [text, setText] = useState(readDraft)
@@ -80,12 +84,25 @@ ${extra}` : extra)),
   )
   const speech = useSpeech(appendText)
 
-  // Ctrl/Cmd+K opens the command palette.
+  // Global shortcuts: Ctrl/Cmd+K palette; N new dump, / search, ? help (not while typing).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault()
         setPaletteOpen((open) => !open)
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        textareaRef.current?.focus()
+      } else if (e.key === '/') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      } else if (e.key === '?') {
+        e.preventDefault()
+        setShortcutsOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -218,6 +235,7 @@ ${extra}` : extra)),
             shown={visibleItems.length}
             total={allItems.length}
             archivedCount={archivedCount}
+            searchRef={searchRef}
           />
         )}
 
@@ -250,7 +268,9 @@ ${extra}` : extra)),
           onExport={onExport}
           onOpenItem={onEdit}
           onOpenDumps={() => setDumpsOpen(true)}
+          onOpenShortcuts={() => setShortcutsOpen(true)}
         />
+        <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </main>
     </div>
   )

@@ -7,6 +7,7 @@ import {
   FileText,
   FilterX,
   History,
+  Keyboard,
   Monitor,
   Moon,
   PenLine,
@@ -40,6 +41,7 @@ type CommandPaletteProps = {
   onExport: (format: ExportFormat) => void
   onOpenItem: (item: Item) => void
   onOpenDumps: () => void
+  onOpenShortcuts: () => void
 }
 
 export function CommandPalette({
@@ -54,6 +56,7 @@ export function CommandPalette({
   onExport,
   onOpenItem,
   onOpenDumps,
+  onOpenShortcuts,
 }: CommandPaletteProps) {
   const { setTheme } = useTheme()
   const run = (action: () => void) => () => {
@@ -89,6 +92,10 @@ export function CommandPalette({
           </CommandItem>
           <CommandItem onSelect={run(clearFilters)}>
             <FilterX /> Clear filters
+          </CommandItem>
+          <CommandItem onSelect={run(onOpenShortcuts)}>
+            <Keyboard /> Keyboard shortcuts
+            <CommandShortcut>?</CommandShortcut>
           </CommandItem>
         </CommandGroup>
 

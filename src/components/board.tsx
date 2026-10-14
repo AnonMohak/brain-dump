@@ -7,6 +7,7 @@ import {
   TouchSensor,
   useDroppable,
   useSensor,
+  useDndContext,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
@@ -27,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { groupByType, TYPE_META } from '@/lib/items'
+import { cardCommand, focusNeighbor } from '@/lib/shortcuts'
 import { cn } from '@/lib/utils'
 import { ItemCard, ItemCardSkeleton } from './item-card'
 
@@ -101,7 +103,7 @@ export function Board({ items, fresh, thinking, ...actions }: BoardProps) {
           ))}
         </TabsList>
         {ITEM_TYPES.map((type) => (
-          <TabsContent key={type} value={type} className="space-y-2">
+          <TabsContent key={type} value={type} className="space-y-2" data-board-column={type}>
             {actions.onAdd && (
               <Button variant="outline" size="sm" className="w-full" onClick={() => actions.onAdd!(type)}>
                 <Plus /> Add a {TYPE_META[type].label.toLowerCase()}
@@ -163,6 +165,7 @@ function Column({ type, items, onAdd, ...rest }: ColumnProps) {
   return (
     <section
       ref={setNodeRef}
+      data-board-column={type}
       aria-label={meta.plural}
       className={cn(
         'flex min-w-0 flex-col rounded-xl border border-border/70 bg-surface p-1.5 transition-colors',
@@ -208,7 +211,12 @@ function ColumnBody({
       onDelete: () => onDelete(item.id),
       onEdit: onEdit ? () => onEdit(item) : undefined,
     }
-    return sortable ? <SortableCard key={item.id} {...props} /> : <ItemCard key={item.id} {...props} />
+    const onKey = (e: React.KeyboardEvent<HTMLElement>) => handleCardKey(e, item, { onUpdate, onDelete, onEdit })
+    return sortable ? (
+      <SortableCard key={item.id} {...props} onCardKey={onKey} />
+    ) : (
+      <ItemCard key={item.id} {...props} tabIndex={0} onKeyDown={onKey} />
+    )
   })
 
   return (
@@ -230,16 +238,49 @@ function ColumnBody({
   )
 }
 
-function SortableCard(props: React.ComponentProps<typeof ItemCard>) {
+/** Card shortcuts (see src/lib/shortcuts.ts). Returns true when the key was used. */
+function handleCardKey(
+  e: React.KeyboardEvent<HTMLElement>,
+  item: Item,
+  actions: Pick<BoardActions, 'onUpdate' | 'onDelete' | 'onEdit'>,
+): boolean {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.target !== e.currentTarget) return false
+  const command = cardCommand(e.key, item)
+  if (!command) return false
+  e.preventDefault()
+  const card = e.currentTarget
+  if (command.kind === 'focus') focusNeighbor(card, command.direction)
+  else if (command.kind === 'edit') actions.onEdit?.(item)
+  else if (command.kind === 'update') actions.onUpdate(item.id, command.patch)
+  else {
+    // Keep the keyboard on the board: focus the next card (or the one above).
+    const cards = [...(card.closest('[data-board-column]')?.querySelectorAll<HTMLElement>('[data-card-id]') ?? [])]
+    const index = cards.indexOf(card)
+    actions.onDelete(item.id)
+    ;(cards[index + 1] ?? cards[index - 1])?.focus()
+  }
+  return true
+}
+
+function SortableCard({
+  onCardKey,
+  ...props
+}: React.ComponentProps<typeof ItemCard> & { onCardKey: (e: React.KeyboardEvent<HTMLElement>) => boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: props.item.id,
   })
+  const { active } = useDndContext()
   return (
     <ItemCard
       ref={setNodeRef}
       {...props}
       {...attributes}
       {...listeners}
+      onKeyDown={(e) => {
+        // While a card is being dragged, the arrow keys belong to the drag.
+        if (!active && onCardKey(e)) return
+        listeners?.onKeyDown?.(e)
+      }}
       aria-roledescription="draggable card"
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn('touch-manipulation', isDragging && 'opacity-30')}
