@@ -137,6 +137,36 @@
   to { transform: translateX(300%); }
 }
 
+/* A card from the AI stream drops in and glows once. */
+@keyframes sift-land {
+  0% { opacity: 0; transform: translateY(-10px) scale(0.97); }
+  60% { opacity: 1; transform: translateY(1px) scale(1.005); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes sift-glow {
+  0% {
+    box-shadow:
+      0 0 0 2px color-mix(in oklch, var(--primary) 70%, transparent),
+      0 10px 28px -10px color-mix(in oklch, var(--primary) 55%, transparent);
+  }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.sift-land {
+  animation:
+    sift-land 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    sift-glow 1.6s ease-out 0.25s both;
+}
+
+/* A number that just changed pops a little. */
+@keyframes sift-tick {
+  0% { transform: scale(1.5); color: var(--primary); }
+  100% { transform: scale(1); }
+}
+.sift-tick {
+  display: inline-block;
+  animation: sift-tick 0.4s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -148,6 +148,11 @@ export function Board({ items, fresh, thinking, ...actions }: BoardProps) {
   )
 }
 
+/** Counts animate only while the AI is adding items. */
+function thinkingOrFresh({ fresh, thinking }: { fresh: ReadonlySet<string>; thinking: boolean }) {
+  return thinking || fresh.size > 0
+}
+
 function openCount(items: Item[]) {
   return items.filter((item) => item.status === 'open').length
 }
@@ -175,7 +180,12 @@ function Column({ type, items, onAdd, ...rest }: ColumnProps) {
       <header className="flex h-9 items-center gap-2 pr-1 pl-2.5">
         <span className={cn('size-2 rounded-full', meta.dot)} />
         <h2 className="text-[13px] font-semibold tracking-tight">{meta.plural}</h2>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">{openCount(items)}</span>
+        <span
+          key={openCount(items)}
+          className={cn('font-mono text-xs text-muted-foreground tabular-nums', thinkingOrFresh(rest) && 'sift-tick')}
+        >
+          {openCount(items)}
+        </span>
         {onAdd && (
           <Button
             variant="ghost"

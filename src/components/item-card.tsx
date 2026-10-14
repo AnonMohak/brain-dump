@@ -134,7 +134,7 @@ export const ItemCard = memo(function ItemCard({
       className={cn(
         'group/card relative rounded-lg border outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background bg-card p-3 text-card-foreground shadow-xs transition-[border-color,box-shadow,opacity] hover:border-foreground/15 hover:shadow-sm',
         done && 'opacity-55',
-        fresh && 'animate-in fade-in-0 slide-in-from-top-2 duration-300 ease-out',
+        fresh && 'sift-land',
         className,
       )}
     >
