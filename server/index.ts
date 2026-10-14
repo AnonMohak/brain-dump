@@ -1,9 +1,11 @@
 import { serveStatic } from 'hono/bun'
 import { createApp } from './app'
+import { openDb } from './db/client'
 import { loadEnv } from './env'
 
 const env = loadEnv()
-const app = createApp({ env })
+const db = openDb(env.DATABASE_PATH)
+const app = createApp({ env, db })
 
 // In production one process serves the API and the built React app.
 if (env.NODE_ENV === 'production') {
