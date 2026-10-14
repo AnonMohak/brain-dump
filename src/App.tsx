@@ -17,7 +17,8 @@ import { DumpsSheet } from '@/components/dumps-sheet'
 import { FilterBar } from '@/components/filter-bar'
 import { ItemEditor, type EditorTarget } from '@/components/item-editor'
 import { LoginScreen } from '@/components/login-screen'
-import { useDeleteItem, useDumps, useHealth, useItems, useSession, useUpdateItem } from '@/hooks/use-data'
+import { useDumps, useHealth, useItems, useSession } from '@/hooks/use-data'
+import { useItemActions } from '@/hooks/use-item-actions'
 import { useFilters } from '@/hooks/use-filters'
 import { useOrganize } from '@/hooks/use-organize'
 import { useSpeech } from '@/hooks/use-speech'
@@ -70,8 +71,7 @@ function Workspace() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const organizer = useOrganize()
-  const updateItem = useUpdateItem()
-  const deleteItem = useDeleteItem()
+  const actions = useItemActions()
   const [text, setText] = useState(readDraft)
   const appendText = useCallback(
     (extra: string) => setText((current) => (current.trim() ? `${current.trimEnd()}
@@ -136,11 +136,9 @@ ${extra}` : extra)),
     if (ok) setText('')
   }, [organizer, text, filters.dump, setFilters, speech])
 
-  const onUpdate = useCallback(
-    (id: string, patch: UpdateItemInput) => updateItem.mutate({ id, patch }),
-    [updateItem],
-  )
-  const onDelete = useCallback((id: string) => deleteItem.mutate(id), [deleteItem])
+  const { updateItem, deleteItem } = actions
+  const onUpdate = useCallback((id: string, patch: UpdateItemInput) => updateItem(id, patch), [updateItem])
+  const onDelete = useCallback((id: string) => deleteItem(id), [deleteItem])
   const onEdit = useCallback((item: (typeof allItems)[number]) => setEditor({ mode: 'edit', item }), [])
   const onAdd = useCallback((type: ItemType) => setEditor({ mode: 'create', type }), [])
   const onRerun = useCallback(
@@ -234,7 +232,7 @@ ${extra}` : extra)),
             onAdd={onAdd}
           />
         )}
-        <ItemEditor target={editor} onClose={() => setEditor(null)} />
+        <ItemEditor target={editor} onClose={() => setEditor(null)} onDelete={onDelete} />
         <CommandPalette
           open={paletteOpen}
           onOpenChange={setPaletteOpen}

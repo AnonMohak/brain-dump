@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { useCreateItem, useDeleteItem, useUpdateItem } from '@/hooks/use-data'
+import { useCreateItem, useUpdateItem } from '@/hooks/use-data'
 import { PRIORITY_META, TYPE_META } from '@/lib/items'
 import { cn } from '@/lib/utils'
 import { PriorityIcon } from './item-card'
@@ -65,19 +65,20 @@ function parseTags(text: string): string[] {
   return [...new Set(text.split(/[,\s]+/).map(normalizeTag).filter(Boolean))]
 }
 
-export function ItemEditor({ target, onClose }: { target: EditorTarget; onClose: () => void }) {
+type EditorProps = { target: EditorTarget; onClose: () => void; onDelete: (id: string) => void }
+
+export function ItemEditor({ target, onClose, onDelete }: EditorProps) {
   if (!target) return null
   const key = target.mode === 'edit' ? target.item.id : `new-${target.type}`
-  return <EditorDialog key={key} target={target} onClose={onClose} />
+  return <EditorDialog key={key} target={target} onClose={onClose} onDelete={onDelete} />
 }
 
-function EditorDialog({ target, onClose }: { target: Exclude<EditorTarget, null>; onClose: () => void }) {
+function EditorDialog({ target, onClose, onDelete }: Omit<EditorProps, 'target'> & { target: Exclude<EditorTarget, null> }) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(target))
   const [newSubtask, setNewSubtask] = useState('')
   const [dateOpen, setDateOpen] = useState(false)
   const update = useUpdateItem()
   const create = useCreateItem()
-  const remove = useDeleteItem()
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
   const item = target.mode === 'edit' ? target.item : null
@@ -335,7 +336,7 @@ function EditorDialog({ target, onClose }: { target: Exclude<EditorTarget, null>
             <Button
               variant="destructive"
               onClick={() => {
-                remove.mutate(item.id)
+                onDelete(item.id)
                 onClose()
               }}
             >
