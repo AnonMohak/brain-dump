@@ -17,6 +17,7 @@
         document.documentElement.classList.toggle('dark', dark)
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
         document.documentElement.dataset.density = localStorage.getItem('sift:density') || 'comfortable'
+        document.documentElement.dataset.accent = localStorage.getItem('sift:accent') || 'violet'
       } catch (e) {}
     </script>
   </head>

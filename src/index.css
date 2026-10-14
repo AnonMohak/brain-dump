@@ -113,6 +113,32 @@
     --due-soon: oklch(0.769 0.188 70.08);
 }
 
+/* Accent colors (violet is the default in :root and .dark) */
+:root[data-accent="blue"] {
+    --primary: oklch(0.546 0.245 262.881);
+    --ring: oklch(0.623 0.214 259.815);
+}
+:root.dark[data-accent="blue"] {
+    --primary: oklch(0.623 0.214 259.815);
+    --ring: oklch(0.707 0.165 254.624);
+}
+:root[data-accent="green"] {
+    --primary: oklch(0.596 0.145 163.225);
+    --ring: oklch(0.696 0.17 162.48);
+}
+:root.dark[data-accent="green"] {
+    --primary: oklch(0.596 0.145 163.225);
+    --ring: oklch(0.765 0.177 163.223);
+}
+:root[data-accent="orange"] {
+    --primary: oklch(0.646 0.222 41.116);
+    --ring: oklch(0.705 0.213 47.604);
+}
+:root.dark[data-accent="orange"] {
+    --primary: oklch(0.646 0.222 41.116);
+    --ring: oklch(0.75 0.183 55.934);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
