@@ -72,6 +72,6 @@ test('ask sends the question and includes done items', async () => {
   expect(text).toBe('- **Old finished thing** — done.')
   const user = fake.calls[0].messages[1].content
   expect(fake.calls[0].messages[0].content).toContain("Answer the user's question")
-  expect(user).toContain('- Old finished thing (task, medium, done)')
+  expect(user).toMatch(/- Old finished thing \(task, medium, done on \d{4}-\d{2}-\d{2}\)/)
   expect(user).toContain('Question: What did I finish?')
 })

@@ -19,6 +19,7 @@ Rules:
 - Pick at most 6 items: overdue first, then items due today, then high priority items.
 - Write Markdown: one short sentence to start, then a numbered list. Each line: **item title** — a short reason or a concrete first step, plus "morning", "afternoon" or "evening" when it helps.
 - End with one line that starts with "Later this week:" and names up to 3 items, or leave it out when nothing fits.
+- Mention dates in a friendly form ("today", "tomorrow", "Fri Oct 16"), never as YYYY-MM-DD.
 - Keep the whole answer under 150 words. Write in English. No headings, no tables.`
 
 const ASK_PROMPT = `You are Sift. Answer the user's question about their own items.
@@ -32,7 +33,7 @@ function itemLine(item: Item): string {
   const parts = [`${item.type}`, item.priority]
   if (item.dueDate) parts.push(`due ${item.dueDate}${item.dueTime ? ` ${item.dueTime}` : ''}`)
   if (item.recurrence) parts.push(`repeats ${item.recurrence}`)
-  if (item.status === 'done') parts.push('done')
+  if (item.status === 'done') parts.push(item.completedAt ? `done on ${item.completedAt.slice(0, 10)}` : 'done')
   if (item.tags.length) parts.push(item.tags.map((t) => `#${t}`).join(' '))
   const steps = item.subtasks.length ? `; steps ${item.subtasks.filter((s) => s.done).length}/${item.subtasks.length}` : ''
   return `- ${item.title} (${parts.join(', ')}${steps})`
