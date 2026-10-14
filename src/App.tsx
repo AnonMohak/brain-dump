@@ -18,6 +18,7 @@ import { FilterBar } from '@/components/filter-bar'
 import { ItemEditor, type EditorTarget } from '@/components/item-editor'
 import { ShortcutsDialog } from '@/components/shortcuts-dialog'
 import { TodayPanel } from '@/components/today-panel'
+import { Welcome } from '@/components/welcome'
 import { LoginScreen } from '@/components/login-screen'
 import { useDumps, useHealth, useItems, useSession } from '@/hooks/use-data'
 import { useItemActions } from '@/hooks/use-item-actions'
@@ -25,7 +26,6 @@ import { useFilters } from '@/hooks/use-filters'
 import { useOrganize } from '@/hooks/use-organize'
 import { useSpeech } from '@/hooks/use-speech'
 import { downloadText } from '@/lib/download'
-import { EXAMPLE_DUMP } from '@/lib/example'
 import { isTyping } from '@/lib/shortcuts'
 import { isUrgent } from '@/lib/items'
 
@@ -207,7 +207,6 @@ ${extra}` : extra)),
           state={organizer.state}
           busy={organizer.busy}
           aiConfigured={health.data?.aiConfigured}
-          onTryExample={allItems.length === 0 ? () => setText(EXAMPLE_DUMP) : undefined}
           textareaRef={textareaRef}
           onDropText={appendText}
           interim={speech.interim}
@@ -242,7 +241,14 @@ ${extra}` : extra)),
 
         <TodayPanel items={visibleItems} onUpdate={onUpdate} onEdit={onEdit} />
 
-        {items.isError ? (
+        {items.isSuccess && allItems.length === 0 && !organizer.busy ? (
+          <Welcome
+            onPick={(sample) => {
+              setText(sample)
+              textareaRef.current?.focus()
+            }}
+          />
+        ) : items.isError ? (
           <p className="text-sm text-destructive">Could not load your items: {items.error.message}</p>
         ) : (
           <Board
