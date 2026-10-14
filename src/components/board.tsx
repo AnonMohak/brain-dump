@@ -230,7 +230,7 @@ function ColumnBody({
   })
 
   return (
-    <div className="flex min-h-28 flex-col gap-1.5">
+    <div className="flex min-h-28 flex-col gap-1.5 compact:gap-1">
       {thinking && <ItemCardSkeleton />}
       {sortable ? (
         <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>

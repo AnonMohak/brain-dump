@@ -132,7 +132,7 @@ export const ItemCard = memo(function ItemCard({
       data-card-id={item.id}
       {...props}
       className={cn(
-        'group/card relative rounded-lg border outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background bg-card p-3 text-card-foreground shadow-xs transition-[border-color,box-shadow,opacity] hover:border-foreground/15 hover:shadow-sm',
+        'group/card relative rounded-lg border compact:p-2 compact:rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background bg-card p-3 text-card-foreground shadow-xs transition-[border-color,box-shadow,opacity] hover:border-foreground/15 hover:shadow-sm',
         done && 'opacity-55',
         fresh && 'sift-land',
         className,
@@ -153,7 +153,7 @@ export const ItemCard = memo(function ItemCard({
             onClick={onEdit}
             {...stopDrag}
             className={cn(
-              'block w-full text-left text-sm leading-snug font-medium text-pretty outline-none focus-visible:underline',
+              'block w-full text-left text-sm leading-snug font-medium text-pretty outline-none focus-visible:underline compact:text-[13px]',
               onEdit ? 'cursor-pointer' : 'cursor-default',
               done && 'line-through decoration-muted-foreground/60',
             )}
@@ -161,10 +161,10 @@ export const ItemCard = memo(function ItemCard({
             {item.title}
           </button>
           {item.details && (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.details}</p>
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground compact:hidden">{item.details}</p>
           )}
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 compact:mt-1">
             <PriorityLabel priority={item.priority} />
             <DueBadge item={item} />
             {item.subtasks.length > 0 && (

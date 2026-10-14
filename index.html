@@ -16,6 +16,7 @@
         var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
         document.documentElement.classList.toggle('dark', dark)
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        document.documentElement.dataset.density = localStorage.getItem('sift:density') || 'comfortable'
       } catch (e) {}
     </script>
   </head>
