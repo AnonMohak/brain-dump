@@ -17,6 +17,7 @@ import { DumpsSheet } from '@/components/dumps-sheet'
 import { FilterBar } from '@/components/filter-bar'
 import { ItemEditor, type EditorTarget } from '@/components/item-editor'
 import { ShortcutsDialog } from '@/components/shortcuts-dialog'
+import { TodayPanel } from '@/components/today-panel'
 import { LoginScreen } from '@/components/login-screen'
 import { useDumps, useHealth, useItems, useSession } from '@/hooks/use-data'
 import { useItemActions } from '@/hooks/use-item-actions'
@@ -238,6 +239,8 @@ ${extra}` : extra)),
             searchRef={searchRef}
           />
         )}
+
+        <TodayPanel items={visibleItems} onUpdate={onUpdate} onEdit={onEdit} />
 
         {items.isError ? (
           <p className="text-sm text-destructive">Could not load your items: {items.error.message}</p>
