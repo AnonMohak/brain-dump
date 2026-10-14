@@ -40,6 +40,7 @@ function describeFilters(filters: Filters, dumps: Dump[]): string {
   if (filters.priority) parts.push(`${PRIORITY_LABEL[filters.priority].toLowerCase()} priority`)
   if (filters.urgent) parts.push('urgent only')
   if (filters.hideDone) parts.push('open only')
+  if (filters.showArchived) parts.push('with archived')
   if (filters.q.trim()) parts.push(`search "${filters.q.trim()}"`)
   return parts.join(', ')
 }
@@ -96,6 +97,7 @@ export const exportJsonSchema = z.object({
     priority: z.enum(PRIORITIES).nullable(),
     urgent: z.boolean(),
     hideDone: z.boolean(),
+    showArchived: z.boolean(),
     q: z.string(),
   }),
   dumps: z.array(dumpSchema.omit({ itemCount: true })),

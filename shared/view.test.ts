@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import type { Item } from './schemas'
 import {
   allTags,
+  isArchived,
   applyFilters,
   EMPTY_FILTERS,
   filtersFromSearch,
@@ -38,7 +39,7 @@ function makeItem(fields: Partial<Item> = {}): Item {
 
 describe('URL round trip', () => {
   test('filters survive the URL', () => {
-    const filters = { ...EMPTY_FILTERS, dump: 'd1', tag: 'work', priority: 'high' as const, urgent: true, hideDone: true, q: 'slides' }
+    const filters = { ...EMPTY_FILTERS, dump: 'd1', tag: 'work', priority: 'high' as const, urgent: true, hideDone: true, showArchived: true, q: 'slides' }
     expect(filtersFromSearch(filtersToSearch(filters))).toEqual(filters)
     expect(filtersToSearch(EMPTY_FILTERS)).toBe('')
     expect(hasActiveFilters(EMPTY_FILTERS)).toBe(false)
@@ -99,5 +100,25 @@ describe('board order', () => {
 
   test('allTags is sorted and unique', () => {
     expect(allTags([makeItem({ tags: ['b', 'a'] }), makeItem({ tags: ['a'] })])).toEqual(['a', 'b'])
+  })
+})
+
+describe('archive', () => {
+  const now = new Date('2026-10-20T12:00:00Z')
+  const old = makeItem({ status: 'done', completedAt: '2026-10-10T12:00:00Z', title: 'Old done thing' })
+  const recent = makeItem({ status: 'done', completedAt: '2026-10-18T12:00:00Z' })
+  const open = makeItem()
+
+  test('done items older than 7 days are archived', () => {
+    expect(isArchived(old, now)).toBe(true)
+    expect(isArchived(recent, now)).toBe(false)
+    expect(isArchived(open, now)).toBe(false)
+  })
+
+  test('archived items are hidden, unless shown or searched', () => {
+    const items = [old, recent, open]
+    expect(applyFilters(items, EMPTY_FILTERS, now).map((i) => i.id)).toEqual([recent.id, open.id])
+    expect(applyFilters(items, { ...EMPTY_FILTERS, showArchived: true }, now)).toHaveLength(3)
+    expect(applyFilters(items, { ...EMPTY_FILTERS, q: 'old done' }, now).map((i) => i.id)).toEqual([old.id])
   })
 })

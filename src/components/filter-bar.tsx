@@ -1,6 +1,6 @@
 import { PRIORITIES, type Dump, type Priority } from '@shared/schemas'
 import { hasActiveFilters, type Filters } from '@shared/view'
-import { AlarmClock, EyeOff, Search, X } from 'lucide-react'
+import { AlarmClock, Archive, EyeOff, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PRIORITY_META } from '@/lib/items'
@@ -17,6 +17,7 @@ type FilterBarProps = {
   tags: string[]
   shown: number
   total: number
+  archivedCount: number
   searchRef?: React.Ref<HTMLInputElement>
 }
 
@@ -47,7 +48,17 @@ function Toggle({
   )
 }
 
-export function FilterBar({ filters, setFilters, clearFilters, dumps, tags, shown, total, searchRef }: FilterBarProps) {
+export function FilterBar({
+  filters,
+  setFilters,
+  clearFilters,
+  dumps,
+  tags,
+  shown,
+  total,
+  archivedCount,
+  searchRef,
+}: FilterBarProps) {
   const active = hasActiveFilters(filters)
   const dumpLabel = (dump: Dump) =>
     dump.title ?? `Dump from ${new Date(dump.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
@@ -120,6 +131,15 @@ export function FilterBar({ filters, setFilters, clearFilters, dumps, tags, show
       <Toggle pressed={filters.hideDone} onClick={() => setFilters({ hideDone: !filters.hideDone })} label="Hide done items">
         <EyeOff className="size-3.5" /> Hide done
       </Toggle>
+      {archivedCount > 0 && (
+        <Toggle
+          pressed={filters.showArchived}
+          onClick={() => setFilters({ showArchived: !filters.showArchived })}
+          label="Show archived items (done more than 7 days ago)"
+        >
+          <Archive className="size-3.5" /> Archived <span className="tabular-nums opacity-70">{archivedCount}</span>
+        </Toggle>
+      )}
 
       {active && (
         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={clearFilters}>
@@ -128,7 +148,7 @@ export function FilterBar({ filters, setFilters, clearFilters, dumps, tags, show
       )}
 
       <span className="ml-auto text-xs text-muted-foreground tabular-nums" aria-live="polite">
-        {active ? `${shown} of ${total} items` : `${total} item${total === 1 ? '' : 's'}`}
+        {active || shown !== total ? `${shown} of ${total} items` : `${total} item${total === 1 ? '' : 's'}`}
       </span>
     </div>
   )

@@ -9,7 +9,17 @@ export type Filters = {
   /** Only overdue items and items due within 24 hours. */
   urgent: boolean
   hideDone: boolean
+  /** Show done items older than ARCHIVE_AFTER_DAYS. A search always includes them. */
+  showArchived: boolean
   q: string
+}
+
+export const ARCHIVE_AFTER_DAYS = 7
+
+/** Done for more than ARCHIVE_AFTER_DAYS: hidden from the board, still searchable. */
+export function isArchived(item: Item, now: Date = new Date()): boolean {
+  if (item.status !== 'done' || !item.completedAt) return false
+  return now.getTime() - new Date(item.completedAt).getTime() > ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -18,11 +28,12 @@ export const EMPTY_FILTERS: Filters = {
   priority: null,
   urgent: false,
   hideDone: false,
+  showArchived: false,
   q: '',
 }
 
 export function hasActiveFilters(f: Filters): boolean {
-  return Boolean(f.dump || f.tag || f.priority || f.urgent || f.hideDone || f.q.trim())
+  return Boolean(f.dump || f.tag || f.priority || f.urgent || f.hideDone || f.showArchived || f.q.trim())
 }
 
 export function filtersFromSearch(search: string): Filters {
@@ -34,6 +45,7 @@ export function filtersFromSearch(search: string): Filters {
     priority: PRIORITIES.includes(priority as Priority) ? (priority as Priority) : null,
     urgent: params.get('urgent') === '1',
     hideDone: params.get('hideDone') === '1',
+    showArchived: params.get('archived') === '1',
     q: params.get('q') ?? '',
   }
 }
@@ -45,6 +57,7 @@ export function filtersToSearch(f: Filters): string {
   if (f.priority) params.set('priority', f.priority)
   if (f.urgent) params.set('urgent', '1')
   if (f.hideDone) params.set('hideDone', '1')
+  if (f.showArchived) params.set('archived', '1')
   if (f.q.trim()) params.set('q', f.q.trim())
   const text = params.toString()
   return text ? `?${text}` : ''
@@ -57,6 +70,7 @@ export function applyFilters(items: Item[], f: Filters, now: Date = new Date()):
     if (f.tag && !item.tags.includes(f.tag)) return false
     if (f.priority && item.priority !== f.priority) return false
     if (f.hideDone && item.status === 'done') return false
+    if (!f.showArchived && !q && isArchived(item, now)) return false
     if (f.urgent) {
       const state = dueState(item, now)
       if (state !== 'overdue' && state !== 'soon') return false

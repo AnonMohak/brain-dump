@@ -1,6 +1,6 @@
 import type { ItemType, UpdateItemInput } from '@shared/schemas'
 import { exportFileName, toJson, toMarkdown } from '@shared/export'
-import { allTags, applyFilters } from '@shared/view'
+import { allTags, applyFilters, isArchived } from '@shared/view'
 import { Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Loader2, ServerCrash } from 'lucide-react'
@@ -109,6 +109,7 @@ ${extra}` : extra)),
   const allItems = useMemo(() => items.data ?? [], [items.data])
   const visibleItems = useMemo(() => applyFilters(allItems, filters), [allItems, filters])
   const tags = useMemo(() => allTags(allItems), [allItems])
+  const archivedCount = useMemo(() => allItems.filter((item) => isArchived(item)).length, [allItems])
   const urgentCount = useMemo(
     () => allItems.filter((item) => isUrgent(item)).length,
     [allItems],
@@ -216,6 +217,7 @@ ${extra}` : extra)),
             tags={tags}
             shown={visibleItems.length}
             total={allItems.length}
+            archivedCount={archivedCount}
           />
         )}
 
