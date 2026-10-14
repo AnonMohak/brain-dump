@@ -281,7 +281,7 @@ describe('Gemini first, Nemotron as fallback', () => {
     const { events } = await postDump(app)
 
     expect(fake.urls).toEqual(['https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'])
-    expect(fake.calls[0]).toMatchObject({ model: GEMINI, stream: true, reasoning_effort: 'minimal' })
+    expect(fake.calls[0]).toMatchObject({ model: GEMINI, stream: true, reasoning_effort: 'low' })
     expect(fake.calls[0].models).toBeUndefined()
     expect(fake.calls[0].reasoning).toBeUndefined()
     expect(events[1]).toMatchObject({ type: 'status', phase: 'thinking', model: GEMINI })

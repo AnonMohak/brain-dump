@@ -30,7 +30,7 @@ function geminiAttempt(env: Env, apiKey: string): Attempt {
           messages,
           temperature: 0.2,
           max_tokens: MAX_TOKENS,
-          // Gemini 3 models cannot turn thinking off; "minimal" is the fastest level.
+          // Gemini 3 models cannot turn thinking off. Some (gemini-3.8-flash) reject "minimal", so "low" is the default.
           ...(env.GEMINI_REASONING_EFFORT === 'default' ? {} : { reasoning_effort: env.GEMINI_REASONING_EFFORT }),
         },
         signal,

@@ -2,7 +2,7 @@
 
 export const ULTRA = 'nvidia/nemotron-3-ultra-550b-a55b:free'
 export const SUPER = 'nvidia/nemotron-3-super-120b-a12b:free'
-export const GEMINI = 'gemini-3.8-flash'
+export const GEMINI = 'gemini-3.5-flash-lite'
 
 const encoder = new TextEncoder()
 

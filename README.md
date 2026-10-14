@@ -2,7 +2,7 @@
 
 Sift turns a messy brain dump into **tasks, ideas, reminders and questions**, with priorities, deadlines, tags and subtasks. Paste your thoughts, press **Ctrl+Enter**, and watch the items stream onto a board.
 
-- Live AI sorting (items appear one by one) with Google Gemini 3.8 Flash (free tier) first, then NVIDIA Nemotron 3 Ultra and Super (free, on OpenRouter) as fallbacks
+- Live AI sorting (items appear one by one) with Google Gemini 3.5 Flash-Lite (free tier) first, then NVIDIA Nemotron 3 Ultra and Super (free, on OpenRouter) as fallbacks
 - Tasks and reminders always get a date. Dates from your text are "stated", AI guesses are "suggested" (shown with `~`)
 - Four-column board: drag cards between columns and within a column, edit everything, add items by hand
 - Dump history with re-run, filters (dump, tag, priority, urgent, done, search) kept in the URL
@@ -36,8 +36,8 @@ Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM 
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | (empty) | Your Gemini key. When set, Gemini is tried first. |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model |
-| `GEMINI_REASONING_EFFORT` | `minimal` | `minimal` (fastest), `low`, `medium`, `high`, or `default`. Gemini 3 cannot turn thinking off. |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | The Gemini model. Fastest and most reliable in tests (first item in 3-4 s). `gemini-3.8-flash` is smarter but was often overloaded (503). |
+| `GEMINI_REASONING_EFFORT` | `low` | `low` (fastest), `medium`, `high`, or `default`. Gemini 3 cannot turn thinking off. |
 | `OPENROUTER_API_KEY` | (empty) | Your OpenRouter key (fallback). With no key at all the app runs, but cannot sort. |
 | `OPENROUTER_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | The first OpenRouter model |
 | `OPENROUTER_FALLBACK_MODEL` | `nvidia/nemotron-3-super-120b-a12b:free` | Used when the main model is busy or fails |
@@ -70,7 +70,7 @@ Never give a secret a `VITE_` prefix: Vite copies those variables into the brows
 
 ## Free model limits and privacy
 
-- Gemini free-tier limits depend on your account. See them at <https://aistudio.google.com/rate-limit>. On the free tier, Google uses your prompts to improve its products.
+- Gemini free-tier limits depend on your account and model (in tests: 5 requests per minute for gemini-3.8-flash). See them at <https://aistudio.google.com/rate-limit>. On the free tier, Google uses your prompts to improve its products.
 - OpenRouter free models allow 20 requests per minute and 50 requests per day (1000 per day after you buy 10 credits). One dump or one re-run is one request.
 - Free endpoints can log your prompts. Do not put passwords or very private data in a dump.
 - If OpenRouter reports a "data policy" error, allow free endpoints at <https://openrouter.ai/settings/privacy>.
