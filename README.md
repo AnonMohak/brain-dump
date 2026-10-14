@@ -89,3 +89,7 @@ scripts/  ai-smoke.ts and its sample dumps
 ## Running on a server later
 
 Set `HOST=0.0.0.0`, choose a `PORT`, set `APP_PASSWORD`, then run `bun run build && bun run start` behind HTTPS. The app needs a host that runs Bun with a writable disk for the SQLite file (for example a VPS or Fly.io). Static hosts such as Cloudflare Pages cannot run it.
+
+## Install as an app
+
+In production (`bun run build && bun run start`), Sift is a Progressive Web App. In Chrome or Edge, use the install icon in the address bar (or "Install Sift" in the menu). The app shell then opens offline too; your items still come from the Sift server.

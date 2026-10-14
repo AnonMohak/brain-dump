@@ -13,7 +13,7 @@ export function useHealth() {
 }
 
 export function useSession() {
-  return useQuery({ queryKey: ['session'], queryFn: api.session, staleTime: Infinity })
+  return useQuery({ queryKey: ['session'], queryFn: api.session, staleTime: Infinity, retry: 1 })
 }
 
 export function useItems() {

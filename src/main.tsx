@@ -12,6 +12,13 @@ const queryClient = new QueryClient({
   },
 })
 
+// Install as an app (PWA): the service worker runs in production builds only.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => console.warn('Service worker failed', error))
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

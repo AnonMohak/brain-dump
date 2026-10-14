@@ -1,0 +1,19 @@
+{
+  "name": "Sift — brain dump organizer",
+  "short_name": "Sift",
+  "description": "Turn a messy brain dump into tasks, ideas, reminders and questions.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New dump", "url": "/", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Urgent items", "url": "/?urgent=1", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
