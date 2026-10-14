@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
+import type { AiTimeouts } from './ai/organize'
 import { authRoutes, requireSession } from './auth'
 import type { Db } from './db/client'
 import type { Env } from './env'
@@ -9,9 +10,12 @@ import { itemRoutes } from './routes/items'
 export type AppDeps = {
   env: Env
   db: Db
+  /** Tests inject this to fake OpenRouter. */
+  fetch?: typeof fetch
+  aiTimeouts?: Partial<AiTimeouts>
 }
 
-export function createApp({ env, db }: AppDeps) {
+export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
   const app = new Hono()
 
   const api = new Hono()
@@ -26,7 +30,7 @@ export function createApp({ env, db }: AppDeps) {
     )
     .route('/', authRoutes(env))
     .route('/items', itemRoutes(db))
-    .route('/dumps', dumpRoutes(db))
+    .route('/dumps', dumpRoutes({ db, env, fetch, timeouts: aiTimeouts }))
 
   app.route('/api', api)
   app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))
