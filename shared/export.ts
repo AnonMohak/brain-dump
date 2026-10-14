@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { dumpSchema, itemSchema, PRIORITIES, type Dump, type Item, type ItemType } from './schemas'
+import { dumpSchema, itemSchema, PRIORITIES, recurrenceSchema, type Dump, type Item, type ItemType } from './schemas'
 import { groupByType, hasActiveFilters, type Filters } from './view'
 
 const SECTION: Record<ItemType, string> = {
@@ -121,3 +121,17 @@ export function toJson({ items, dumps, filters, exportedAt }: ExportInput): stri
   }
   return JSON.stringify(data, null, 2) + '\n'
 }
+
+/**
+ * What /api/import accepts: a Sift JSON export. Lenient about fields that
+ * older exports do not have (recurrence, newer filters).
+ */
+export const importJsonSchema = z.object({
+  app: z.literal('sift'),
+  version: z.literal(1),
+  dumps: z.array(dumpSchema.omit({ itemCount: true })).max(5000),
+  items: z
+    .array(itemSchema.extend({ recurrence: recurrenceSchema.nullable().default(null) }))
+    .max(20000),
+})
+export type ImportJson = z.infer<typeof importJsonSchema>

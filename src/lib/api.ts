@@ -41,4 +41,6 @@ export const api = {
 
   dumps: () => request<Dump[]>('/dumps'),
   deleteDump: (id: string) => request<void>(`/dumps/${id}`, { method: 'DELETE' }),
+  importJson: (data: unknown) =>
+    request<{ dumps: number; items: number; skipped: number }>('/import', { method: 'POST', body: json(data) }),
 }

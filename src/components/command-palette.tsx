@@ -11,6 +11,7 @@ import {
   Keyboard,
   MessageCircleQuestion,
   Sparkles,
+  Upload,
   Monitor,
   Moon,
   PenLine,
@@ -47,6 +48,7 @@ type CommandPaletteProps = {
   onOpenShortcuts: () => void
   onAsk: () => void
   onPlan: () => void
+  onImport: () => void
 }
 
 export function CommandPalette({
@@ -64,6 +66,7 @@ export function CommandPalette({
   onOpenShortcuts,
   onAsk,
   onPlan,
+  onImport,
 }: CommandPaletteProps) {
   const { setTheme } = useTheme()
   const run = (action: () => void) => () => {
@@ -97,6 +100,9 @@ export function CommandPalette({
           </CommandItem>
           <CommandItem onSelect={run(() => onExport('ics'))}>
             <CalendarPlus /> Export view to calendar (.ics)
+          </CommandItem>
+          <CommandItem onSelect={run(onImport)}>
+            <Upload /> Import JSON…
           </CommandItem>
           <CommandItem onSelect={run(onOpenDumps)}>
             <History /> Open dump history

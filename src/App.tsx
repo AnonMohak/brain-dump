@@ -3,6 +3,7 @@ import { exportFileName, toJson, toMarkdown } from '@shared/export'
 import { toIcs } from '@shared/ics'
 import { allTags, applyFilters, isArchived } from '@shared/view'
 import { Search, Sparkles } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, ServerCrash } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -28,6 +29,7 @@ import { useItemActions } from '@/hooks/use-item-actions'
 import { useFilters } from '@/hooks/use-filters'
 import { useOrganize } from '@/hooks/use-organize'
 import { useSpeech } from '@/hooks/use-speech'
+import { api } from '@/lib/api'
 import { downloadText } from '@/lib/download'
 import { isTyping } from '@/lib/shortcuts'
 import { isUrgent } from '@/lib/items'
@@ -80,6 +82,8 @@ function Workspace() {
   const [askOpen, setAskOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const importRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
   const organizer = useOrganize()
   const actions = useItemActions()
   const [text, setText] = useState(readDraft)
@@ -174,6 +178,23 @@ ${extra}` : extra)),
     [visibleItems, dumps.data, filters],
   )
 
+  const onImportFile = useCallback(
+    async (file: File) => {
+      try {
+        if (file.size > 5 * 1024 * 1024) throw new Error('The file is larger than 5 MB.')
+        const data = JSON.parse(await file.text())
+        const result = await api.importJson(data)
+        await queryClient.invalidateQueries()
+        toast.success(`Imported ${result.items} item${result.items === 1 ? '' : 's'} and ${result.dumps} dump${result.dumps === 1 ? '' : 's'}`, {
+          description: result.skipped ? `${result.skipped} were already here and were skipped.` : undefined,
+        })
+      } catch (error) {
+        toast.error(error instanceof SyntaxError ? 'This file is not valid JSON.' : (error as Error).message)
+      }
+    },
+    [queryClient],
+  )
+
   const submit = useCallback(async () => {
     speech.stop()
     // Show the new items: a filter for another dump would hide them.
@@ -221,6 +242,18 @@ ${extra}` : extra)),
             count={visibleItems.length}
             datedCount={visibleItems.filter((item) => item.status === 'open' && item.dueDate).length}
             onExport={onExport}
+            onImport={() => importRef.current?.click()}
+          />
+          <input
+            ref={importRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void onImportFile(file)
+            }}
           />
           <DumpsSheet
             open={dumpsOpen}
@@ -330,6 +363,7 @@ ${extra}` : extra)),
           onOpenShortcuts={() => setShortcutsOpen(true)}
           onAsk={() => setAskOpen(true)}
           onPlan={() => setPlanOpen(true)}
+          onImport={() => importRef.current?.click()}
         />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </main>

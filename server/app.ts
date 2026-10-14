@@ -7,6 +7,7 @@ import type { Db } from './db/client'
 import type { Env } from './env'
 import { aiRoutes } from './routes/ai'
 import { dumpRoutes } from './routes/dumps'
+import { importRoutes } from './routes/import'
 import { itemRoutes } from './routes/items'
 
 export type AppDeps = {
@@ -21,7 +22,10 @@ export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
   const app = new Hono()
 
   const api = new Hono()
-    .use('*', bodyLimit({ maxSize: 256 * 1024 }))
+    .use('*', (c, next) =>
+      // Imports can hold a whole board; everything else stays small.
+      bodyLimit({ maxSize: c.req.path === '/api/import' ? 5 * 1024 * 1024 : 256 * 1024 })(c, next),
+    )
     .use('*', requireSession(env))
     .get('/health', (c) => {
       const plan = attemptPlan(env)
@@ -36,6 +40,7 @@ export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
     .route('/items', itemRoutes(db))
     .route('/dumps', dumpRoutes({ db, env, fetch, timeouts: aiTimeouts }))
     .route('/ai', aiRoutes({ db, env, fetch, timeouts: aiTimeouts }))
+    .route('/import', importRoutes(db))
 
   app.route('/api', api)
   app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))
