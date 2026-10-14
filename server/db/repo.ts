@@ -6,9 +6,11 @@ import type {
   Item,
   ItemType,
   Priority,
+  Recurrence,
   updateItemInputSchema,
 } from '../../shared/schemas'
 import type { z } from 'zod'
+import { nextDueDate } from '../../shared/recurrence'
 import type { Db } from './client'
 import { dumps, items, subtasks } from './schema'
 
@@ -44,6 +46,7 @@ export type NewItem = {
   dueDate: string | null
   dueTime: string | null
   dueSource: DueSource | null
+  recurrence?: Recurrence | null
   tags: string[]
   sourceQuote: string | null
   position: number
@@ -95,6 +98,7 @@ export function createItem(db: Db, input: NewItem): Item {
         dueDate: input.dueDate,
         dueTime: input.dueDate ? input.dueTime : null,
         dueSource: input.dueDate ? input.dueSource : null,
+        recurrence: input.recurrence ?? null,
         tags: input.tags,
         sourceQuote: input.sourceQuote,
         status: 'open',
@@ -129,12 +133,24 @@ export function updateItem(db: Db, id: string, patch: ItemPatch): Item | null {
     values.dueSource = null
   }
 
+  // A repeating item is never "done": it moves to its next date, with fresh subtasks.
+  const recurrence = fields.recurrence !== undefined ? fields.recurrence : current.recurrence
+  const dueDate = fields.dueDate !== undefined ? fields.dueDate : current.dueDate
+  let resetSubtasks = false
+  if (fields.status === 'done' && current.status === 'open' && recurrence && dueDate && fields.dueDate === undefined) {
+    values.status = 'open'
+    values.completedAt = null
+    values.dueDate = nextDueDate(dueDate, recurrence, timestamp.slice(0, 10))
+    resetSubtasks = !subtaskPatch
+  }
+
   db.transaction((tx) => {
     tx.update(items).set(values).where(eq(items.id, id)).run()
     if (subtaskPatch) {
       tx.delete(subtasks).where(eq(subtasks.itemId, id)).run()
       insertSubtasks(tx, id, subtaskPatch)
     }
+    if (resetSubtasks) tx.update(subtasks).set({ done: false }).where(eq(subtasks.itemId, id)).run()
   })
   return getItem(db, id)
 }

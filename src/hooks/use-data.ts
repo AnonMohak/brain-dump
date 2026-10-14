@@ -1,4 +1,6 @@
 import { normalizeTag, type CreateItemInput, type Item, type UpdateItemInput } from '@shared/schemas'
+import { toLocalIsoDate } from '@shared/dates'
+import { isRecurring, nextDueDate } from '@shared/recurrence'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -37,7 +39,12 @@ function applyPatch(item: Item, patch: UpdateItemInput): Item {
     if (!patch.dueDate) next.dueTime = null
   }
   if (patch.dueTime !== undefined && next.dueDate) next.dueTime = patch.dueTime
-  if (patch.status !== undefined && patch.status !== item.status) {
+  if (patch.recurrence !== undefined) next.recurrence = patch.recurrence
+  if (patch.status === 'done' && item.status === 'open' && isRecurring(next) && patch.dueDate === undefined) {
+    // Same rule as the server: a repeating item moves to its next date.
+    next.dueDate = nextDueDate(next.dueDate!, next.recurrence!, toLocalIsoDate(new Date()))
+    next.subtasks = next.subtasks.map((s) => ({ ...s, done: false }))
+  } else if (patch.status !== undefined && patch.status !== item.status) {
     next.status = patch.status
     next.completedAt = patch.status === 'done' ? new Date().toISOString() : null
   }

@@ -138,3 +138,12 @@ describe('dateGuide', () => {
     expect(guide).toContain('in 2 weeks = 2026-10-28')
   })
 })
+
+describe('repeat', () => {
+  test('keeps a repeat only for items with a date', () => {
+    const c = ctx()
+    expect(normalizeItem(item({ title: 'Rent', type: 'reminder', repeat: 'Monthly', due: { date: '2026-11-01', source: 'stated' } }), c)?.recurrence).toBe('monthly')
+    expect(normalizeItem(item({ title: 'Idea', type: 'idea', repeat: 'weekly' }), c)?.recurrence).toBeNull()
+    expect(normalizeItem(item({ title: 'Bad', repeat: 'fortnightly' }), c)?.recurrence).toBeNull()
+  })
+})

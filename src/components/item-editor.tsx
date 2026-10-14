@@ -4,11 +4,14 @@ import {
   MAX_SUBTASKS,
   normalizeTag,
   PRIORITIES,
+  RECURRENCES,
   type Item,
   type ItemType,
   type Priority,
+  type Recurrence,
 } from '@shared/schemas'
-import { CalendarDays, Plus, Trash2, X } from 'lucide-react'
+import { RECURRENCE_LABEL } from '@shared/recurrence'
+import { CalendarDays, Plus, Repeat2, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -40,13 +43,14 @@ type Draft = {
   priority: Priority
   dueDate: string | null
   dueTime: string
+  recurrence: Recurrence | null
   tags: string
   subtasks: { id?: string; text: string; done: boolean }[]
 }
 
 function draftFrom(target: Exclude<EditorTarget, null>): Draft {
   if (target.mode === 'create') {
-    return { type: target.type, title: '', details: '', priority: 'medium', dueDate: null, dueTime: '', tags: '', subtasks: [] }
+    return { type: target.type, title: '', details: '', priority: 'medium', dueDate: null, dueTime: '', recurrence: null, tags: '', subtasks: [] }
   }
   const { item } = target
   return {
@@ -56,6 +60,7 @@ function draftFrom(target: Exclude<EditorTarget, null>): Draft {
     priority: item.priority,
     dueDate: item.dueDate,
     dueTime: item.dueTime ?? '',
+    recurrence: item.recurrence,
     tags: item.tags.join(', '),
     subtasks: item.subtasks.map((s) => ({ id: s.id, text: s.text, done: s.done })),
   }
@@ -95,6 +100,7 @@ function EditorDialog({ target, onClose, onDelete }: Omit<EditorProps, 'target'>
       priority: draft.priority,
       dueDate: draft.dueDate,
       dueTime: draft.dueDate && draft.dueTime ? draft.dueTime : null,
+      recurrence: draft.dueDate ? draft.recurrence : null,
       tags: parseTags(draft.tags),
       subtasks: subtasks.filter((s) => s.text.trim()).slice(0, MAX_SUBTASKS),
     }
@@ -241,13 +247,33 @@ function EditorDialog({ target, onClose, onDelete }: Omit<EditorProps, 'target'>
                       variant="ghost"
                       size="icon"
                       aria-label="Remove the date"
-                      onClick={() => set({ dueDate: null, dueTime: '' })}
+                      onClick={() => set({ dueDate: null, dueTime: '', recurrence: null })}
                     >
                       <X />
                     </Button>
                   </>
                 )}
               </div>
+              {draft.dueDate && (
+                <div className="flex items-center gap-1.5 pt-1" role="radiogroup" aria-label="Repeat">
+                  <Repeat2 className="size-3.5 text-muted-foreground" />
+                  {([null, ...RECURRENCES] as const).map((value) => (
+                    <button
+                      key={value ?? 'none'}
+                      type="button"
+                      role="radio"
+                      aria-checked={draft.recurrence === value}
+                      onClick={() => set({ recurrence: value })}
+                      className={cn(
+                        'h-6 rounded-md px-1.5 text-[11px] font-medium transition-colors',
+                        draft.recurrence === value ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {value ? RECURRENCE_LABEL[value] : 'Once'}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

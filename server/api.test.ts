@@ -11,6 +11,7 @@ const baseItem: NewItem = {
   dueDate: null,
   dueTime: null,
   dueSource: null,
+  recurrence: null,
   tags: [],
   sourceQuote: null,
   position: 0,
@@ -159,5 +160,33 @@ describe('password', () => {
     const cookie = setCookie.split(';')[0]!
     expect((await call('GET', '/api/items', undefined, { cookie })).status).toBe(200)
     expect((await call('GET', '/api/session', undefined, { cookie })).data.authenticated).toBe(true)
+  })
+})
+
+describe('repeating items', () => {
+  test('marking a repeating item done moves it to the next date and resets steps', async () => {
+    const { call } = makeTestApp()
+    const today = new Date().toISOString().slice(0, 10)
+    const created = await call('POST', '/api/items', {
+      type: 'reminder',
+      title: 'Pay rent',
+      dueDate: today,
+      recurrence: 'monthly',
+      subtasks: [{ text: 'Open the bank app', done: true }],
+    })
+    expect(created.data.recurrence).toBe('monthly')
+
+    const res = await call('PATCH', `/api/items/${created.data.id}`, { status: 'done' })
+    expect(res.data.status).toBe('open')
+    expect(res.data.completedAt).toBeNull()
+    expect(res.data.dueDate > today).toBe(true)
+    expect(res.data.subtasks[0].done).toBe(false)
+  })
+
+  test('without a date there is no repeat, and a normal item is done as usual', async () => {
+    const { call } = makeTestApp()
+    const created = await call('POST', '/api/items', { type: 'task', title: 'X', recurrence: 'weekly' })
+    expect(created.data.recurrence).toBeNull()
+    expect((await call('PATCH', `/api/items/${created.data.id}`, { status: 'done' })).data.status).toBe('done')
   })
 })

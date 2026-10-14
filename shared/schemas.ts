@@ -6,6 +6,7 @@ export const ITEM_TYPES = ['task', 'idea', 'reminder', 'question'] as const
 export const PRIORITIES = ['high', 'medium', 'low'] as const
 export const DUE_SOURCES = ['stated', 'suggested'] as const
 export const ITEM_STATUSES = ['open', 'done'] as const
+export const RECURRENCES = ['daily', 'weekly', 'monthly', 'yearly'] as const
 export const DUMP_STATUSES = ['processing', 'done', 'failed', 'cancelled'] as const
 
 export const itemTypeSchema = z.enum(ITEM_TYPES)
@@ -13,12 +14,14 @@ export const prioritySchema = z.enum(PRIORITIES)
 export const dueSourceSchema = z.enum(DUE_SOURCES)
 export const itemStatusSchema = z.enum(ITEM_STATUSES)
 export const dumpStatusSchema = z.enum(DUMP_STATUSES)
+export const recurrenceSchema = z.enum(RECURRENCES)
 
 export type ItemType = z.infer<typeof itemTypeSchema>
 export type Priority = z.infer<typeof prioritySchema>
 export type DueSource = z.infer<typeof dueSourceSchema>
 export type ItemStatus = z.infer<typeof itemStatusSchema>
 export type DumpStatus = z.infer<typeof dumpStatusSchema>
+export type Recurrence = z.infer<typeof recurrenceSchema>
 
 // ---------- Limits ----------
 
@@ -85,6 +88,7 @@ export const itemSchema = z.object({
   dueDate: isoDateSchema.nullable(),
   dueTime: timeSchema.nullable(),
   dueSource: dueSourceSchema.nullable(),
+  recurrence: recurrenceSchema.nullable(),
   tags: z.array(z.string()),
   sourceQuote: z.string().nullable(),
   status: itemStatusSchema,
@@ -125,6 +129,7 @@ export const createItemInputSchema = z.object({
   priority: prioritySchema.default('medium'),
   dueDate: isoDateSchema.nullable().optional(),
   dueTime: timeSchema.nullable().optional(),
+  recurrence: recurrenceSchema.nullable().optional(),
   tags: tagsSchema.default([]),
   subtasks: z.array(subtaskInputSchema).max(MAX_SUBTASKS).default([]),
 })
@@ -139,6 +144,7 @@ export const updateItemInputSchema = z
     dueDate: isoDateSchema.nullable(),
     dueTime: timeSchema.nullable(),
     dueSource: dueSourceSchema.nullable(),
+    recurrence: recurrenceSchema.nullable(),
     tags: tagsSchema,
     status: itemStatusSchema,
     position: z.number().finite(),

@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Pencil,
   Quote,
+  Repeat2,
   Trash2,
 } from 'lucide-react'
 import { memo, useState, type ComponentProps } from 'react'
@@ -167,6 +168,16 @@ export const ItemCard = memo(function ItemCard({
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 compact:mt-1">
             <PriorityLabel priority={item.priority} />
             <DueBadge item={item} />
+            {item.recurrence && item.dueDate && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex h-5 items-center text-muted-foreground">
+                    <Repeat2 className="size-3.5" aria-label={`Repeats ${item.recurrence}`} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Repeats {item.recurrence}. Marking it done moves it to the next date.</TooltipContent>
+              </Tooltip>
+            )}
             {item.subtasks.length > 0 && (
               <span className="inline-flex h-5 items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
                 <ListChecks className="size-3" />

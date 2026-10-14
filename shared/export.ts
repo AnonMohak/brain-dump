@@ -56,6 +56,7 @@ function itemLine(item: Item): string[] {
       `due ${item.dueDate}${item.dueTime ? ` ${item.dueTime}` : ''}${item.dueSource === 'suggested' ? ' (suggested)' : ''}`,
     )
   }
+  if (item.recurrence && item.dueDate) meta.push(`repeats ${item.recurrence}`)
   if (item.tags.length) meta.push(item.tags.map((t) => `#${t}`).join(' '))
   if (done && !CHECKBOX_TYPES.includes(item.type)) meta.push('done')
 

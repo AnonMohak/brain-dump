@@ -19,6 +19,7 @@ export function itemRoutes(db: Db) {
         dueDate,
         dueTime: input.dueTime ?? null,
         dueSource: dueDate ? 'stated' : null,
+        recurrence: dueDate ? (input.recurrence ?? null) : null,
         tags: input.tags,
         sourceQuote: null,
         position: topPosition(db, input.type) - 1,

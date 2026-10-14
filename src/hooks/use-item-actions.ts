@@ -23,7 +23,7 @@ export function useItemActions() {
     (id: string, patch: UpdateItemInput, options: { silent?: boolean } = {}) => {
       const before = current(id)
       update.mutate({ id, patch })
-      const message = options.silent || !before ? null : describeChange(patch)
+      const message = options.silent || !before ? null : describeChange(patch, before)
       if (!message || !before) return
       const back = inversePatch(before, patch)
       toast(message, {

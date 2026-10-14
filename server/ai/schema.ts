@@ -7,6 +7,7 @@ import {
   MAX_SUBTASKS,
   MAX_TITLE_CHARS,
   prioritySchema,
+  recurrenceSchema,
   timeSchema,
 } from '../../shared/schemas'
 
@@ -48,9 +49,10 @@ export const aiItemLineSchema = z.object({
     .max(MAX_SUBTASKS)
     .catch([])
     .default([]),
+  repeat: z.preprocess(lower, recurrenceSchema.nullable()).catch(null).default(null),
 })
 
-/** A change to an item that the user already has (prompt rule 12). */
+/** A change to an item that the user already has (prompt rule 13). */
 export const aiUpdateLineSchema = z.object({
   kind: z.literal('update'),
   ref: z.preprocess((v) => (typeof v === 'number' ? `#${v}` : v), z.string().regex(/^#?\d+$/)),

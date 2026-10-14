@@ -25,6 +25,7 @@ function makeItem(fields: Partial<Item> = {}): Item {
     dueDate: null,
     dueTime: null,
     dueSource: null,
+    recurrence: null,
     tags: [],
     sourceQuote: null,
     status: 'open',

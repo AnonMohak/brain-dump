@@ -72,6 +72,8 @@ export function normalizeItem(
     dueDate: due?.date ?? null,
     dueTime: due?.time ?? null,
     dueSource: due?.source ?? null,
+    // A repeat needs a date to repeat from.
+    recurrence: due ? line.repeat : null,
     tags: tagsSchema.parse(line.tags),
     sourceQuote: verifyQuote(ctx.rawText, line.quote),
     subtasks: line.subtasks.map((text) => ({ text })),

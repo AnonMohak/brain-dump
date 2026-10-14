@@ -4,7 +4,7 @@ import { describeChange, inversePatch } from './changes'
 
 const item: Item = {
   id: 'a', dumpId: null, type: 'task', title: 'Call mom', details: null, priority: 'medium',
-  dueDate: '2026-10-15', dueTime: '17:00', dueSource: 'suggested', tags: ['family'], sourceQuote: null,
+  dueDate: '2026-10-15', dueTime: '17:00', dueSource: 'suggested', recurrence: null, tags: ['family'], sourceQuote: null,
   status: 'open', position: 3, subtasks: [{ id: 's1', text: 'Find number', done: false, position: 0 }],
   createdAt: '', updatedAt: '', completedAt: null,
 }
@@ -31,5 +31,19 @@ describe('describeChange', () => {
     expect(describeChange({ priority: 'high' })).toBe('Priority set to High')
     expect(describeChange({ position: 4 })).toBeNull()
     expect(describeChange({ title: 'x' })).toBeNull()
+  })
+})
+
+describe('repeating items', () => {
+  const rent = { ...item, title: 'Pay rent', dueDate: '2026-10-01', dueTime: null, dueSource: 'stated' as const, recurrence: 'monthly' as const }
+
+  test('done shows the next date, and undo puts the old date back', () => {
+    expect(describeChange({ status: 'done' }, rent, '2026-10-14')).toBe('Done. Next: Nov 1')
+    expect(inversePatch(rent, { status: 'done' })).toEqual({
+      dueDate: '2026-10-01',
+      dueTime: null,
+      dueSource: 'stated',
+      subtasks: [{ id: 's1', text: 'Find number', done: false }],
+    })
   })
 })

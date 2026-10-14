@@ -6,6 +6,7 @@ import {
   ITEM_STATUSES,
   ITEM_TYPES,
   PRIORITIES,
+  RECURRENCES,
 } from '../../shared/schemas'
 
 export const dumps = sqliteTable('dumps', {
@@ -33,6 +34,8 @@ export const items = sqliteTable(
     dueDate: text('due_date'),
     dueTime: text('due_time'),
     dueSource: text('due_source', { enum: DUE_SOURCES }),
+    // Repeating items move to the next date when marked done.
+    recurrence: text('recurrence', { enum: RECURRENCES }),
     tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
     sourceQuote: text('source_quote'),
     status: text('status', { enum: ITEM_STATUSES }).notNull().default('open'),
