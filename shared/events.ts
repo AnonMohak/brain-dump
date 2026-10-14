@@ -12,3 +12,12 @@ export type OrganizeEvent =
   | { type: 'error'; message: string; dump: Dump | null }
 
 export type StreamEvent = { type: 'dump'; dump: Dump } | OrganizeEvent
+
+export type TextMode = 'plan' | 'ask'
+
+/** Events of the SSE stream from POST /api/ai/text (Plan my day, Ask the board). */
+export type TextEvent =
+  | { type: 'status'; model: string }
+  | { type: 'text'; delta: string }
+  | { type: 'done'; model: string }
+  | { type: 'error'; message: string }

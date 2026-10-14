@@ -5,6 +5,7 @@ import { attemptPlan } from './ai/providers'
 import { authRoutes, requireSession } from './auth'
 import type { Db } from './db/client'
 import type { Env } from './env'
+import { aiRoutes } from './routes/ai'
 import { dumpRoutes } from './routes/dumps'
 import { itemRoutes } from './routes/items'
 
@@ -34,6 +35,7 @@ export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
     .route('/', authRoutes(env))
     .route('/items', itemRoutes(db))
     .route('/dumps', dumpRoutes({ db, env, fetch, timeouts: aiTimeouts }))
+    .route('/ai', aiRoutes({ db, env, fetch, timeouts: aiTimeouts }))
 
   app.route('/api', api)
   app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))

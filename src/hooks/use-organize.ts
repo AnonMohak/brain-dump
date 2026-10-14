@@ -111,7 +111,7 @@ export function useOrganize() {
       }
 
       try {
-        await postStream(path, body, onEvent, controller.signal)
+        await postStream<StreamEvent>(path, body, onEvent, controller.signal)
       } catch (error) {
         if (controller.signal.aborted) toast('Stopped. The items that arrived are kept.')
         else toast.error((error as Error).message)

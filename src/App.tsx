@@ -1,7 +1,7 @@
 import type { ItemType, UpdateItemInput } from '@shared/schemas'
 import { exportFileName, toJson, toMarkdown } from '@shared/export'
 import { allTags, applyFilters, isArchived } from '@shared/view'
-import { Search } from 'lucide-react'
+import { Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Loader2, ServerCrash } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -18,6 +18,7 @@ import { FilterBar } from '@/components/filter-bar'
 import { ItemEditor, type EditorTarget } from '@/components/item-editor'
 import { ShortcutsDialog } from '@/components/shortcuts-dialog'
 import { TodayPanel } from '@/components/today-panel'
+import { PlanDialog } from '@/components/ai-answer-dialog'
 import { Welcome } from '@/components/welcome'
 import { LoginScreen } from '@/components/login-screen'
 import { useDumps, useHealth, useItems, useSession } from '@/hooks/use-data'
@@ -73,6 +74,7 @@ function Workspace() {
   const [dumpsOpen, setDumpsOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const organizer = useOrganize()
@@ -251,7 +253,19 @@ ${extra}` : extra)),
           />
         )}
 
-        <TodayPanel items={visibleItems} onUpdate={onUpdate} onEdit={onEdit} />
+        <TodayPanel
+          items={visibleItems}
+          onUpdate={onUpdate}
+          onEdit={onEdit}
+          actions={
+            health.data?.aiConfigured ? (
+              <Button variant="ghost" size="sm" className="text-primary" onClick={() => setPlanOpen(true)}>
+                <Sparkles /> Plan my day
+              </Button>
+            ) : null
+          }
+        />
+        <PlanDialog open={planOpen} onOpenChange={setPlanOpen} />
 
         {items.isSuccess && allItems.length === 0 && !organizer.busy ? (
           <Welcome

@@ -1,4 +1,3 @@
-import type { StreamEvent } from '@shared/events'
 import { createParser } from 'eventsource-parser'
 import { ApiError } from './api'
 
@@ -6,10 +5,10 @@ import { ApiError } from './api'
  * POSTs to an SSE endpoint and calls `onEvent` for each event.
  * (EventSource only supports GET, so this reads the fetch body directly.)
  */
-export async function postStream(
+export async function postStream<Event>(
   path: string,
   body: unknown,
-  onEvent: (event: StreamEvent) => void,
+  onEvent: (event: Event) => void,
   signal: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`/api${path}`, {
@@ -27,7 +26,7 @@ export async function postStream(
     onEvent(event) {
       if (event.event === 'ping') return
       try {
-        onEvent(JSON.parse(event.data) as StreamEvent)
+        onEvent(JSON.parse(event.data) as Event)
       } catch (error) {
         console.error('Bad stream event', error)
       }

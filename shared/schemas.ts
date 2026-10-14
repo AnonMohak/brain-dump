@@ -165,3 +165,15 @@ export const rerunInputSchema = organizeInputSchema.pick({ now: true, timeZone: 
 export type RerunInput = z.infer<typeof rerunInputSchema>
 
 export const loginInputSchema = z.object({ password: z.string().min(1).max(200) })
+
+export const aiTextInputSchema = z
+  .object({
+    mode: z.enum(['plan', 'ask']),
+    question: z.string().trim().max(500).optional(),
+    now: z.iso.datetime({ offset: true }),
+    timeZone: z.string().min(1).max(64),
+  })
+  .refine((v) => v.mode !== 'ask' || (v.question && v.question.length > 0), {
+    message: 'Ask needs a question',
+    path: ['question'],
+  })
