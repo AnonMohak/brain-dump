@@ -13,6 +13,7 @@ import {
   silentResponse,
   streamResponse,
   SUPER,
+  GEMINI,
   ULTRA,
 } from './fake-openrouter'
 import { organizeDump, type OrganizeEvent } from './organize'
@@ -120,7 +121,7 @@ describe('POST /api/dumps', () => {
     const { events } = await postDump(app)
 
     expect(fake.calls.map((c) => c.models ?? [c.model])).toEqual([[ULTRA, SUPER], [SUPER]])
-    expect(events.some((e) => e.type === 'warning' && e.message.includes('Trying again'))).toBe(true)
+    expect(events.some((e) => e.type === 'warning' && e.message.includes(`Trying ${SUPER} instead`))).toBe(true)
     expect(events.at(-1)).toMatchObject({ type: 'done', dump: { modelUsed: SUPER, itemCount: 3 } })
   })
 
@@ -159,7 +160,7 @@ describe('POST /api/dumps', () => {
     })
     const { events } = await postDump(app)
     expect(fake.calls).toHaveLength(2)
-    expect(events.at(-1)).toMatchObject({ type: 'error', message: 'The AI did not answer in time.' })
+    expect(events.at(-1)).toMatchObject({ type: 'error', message: `${SUPER} did not answer in time.` })
   })
 
   test('keeps the items that arrived before a mid-stream error', async () => {
@@ -268,5 +269,67 @@ describe('organizeDump cancel', () => {
       if (event.type === 'item') break
     }
     expect(getDump(db, dump.id)?.status).toBe('done')
+  })
+})
+
+describe('Gemini first, Nemotron as fallback', () => {
+  const BOTH = { GEMINI_API_KEY: 'gm-test', OPENROUTER_API_KEY: 'sk-or-test' }
+
+  test('uses Gemini when its key is set', async () => {
+    const fake = fakeFetch(() => streamResponse(chunk(GOOD_ANSWER), { model: GEMINI, reasoning: false }))
+    const app = makeTestApp({ env: BOTH, fetch: fake.fetch })
+    const { events } = await postDump(app)
+
+    expect(fake.urls).toEqual(['https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'])
+    expect(fake.calls[0]).toMatchObject({ model: GEMINI, stream: true, reasoning_effort: 'minimal' })
+    expect(fake.calls[0].models).toBeUndefined()
+    expect(fake.calls[0].reasoning).toBeUndefined()
+    expect(events[1]).toMatchObject({ type: 'status', phase: 'thinking', model: GEMINI })
+    expect(events.at(-1)).toMatchObject({ type: 'done', dump: { modelUsed: GEMINI, itemCount: 3 } })
+  })
+
+  test('falls back to OpenRouter when Gemini hits its limit', async () => {
+    const fake = fakeFetch(
+      () => errorResponse(429, 'Resource has been exhausted (e.g. check quota).'),
+      () => streamResponse(chunk(GOOD_ANSWER)),
+    )
+    const app = makeTestApp({ env: BOTH, fetch: fake.fetch })
+    const { events } = await postDump(app)
+
+    expect(fake.urls.map((u) => new URL(u).host)).toEqual(['generativelanguage.googleapis.com', 'openrouter.ai'])
+    expect(fake.calls[1]).toMatchObject({ model: ULTRA, models: [ULTRA, SUPER] })
+    const warning = events.find((e) => e.type === 'warning')
+    expect(warning.message).toContain(`${GEMINI} is busy, or its free limit is used up (Gemini 429).`)
+    expect(warning.message).toContain(`Trying ${ULTRA} instead`)
+    expect(events.at(-1)).toMatchObject({ type: 'done', dump: { modelUsed: ULTRA } })
+  })
+
+  test('a bad Gemini key (Gemini answers 400) still falls back, with a clear message', async () => {
+    const fake = fakeFetch(
+      () =>
+        new Response(JSON.stringify([{ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }]), {
+          status: 400,
+        }),
+      () => streamResponse(chunk(GOOD_ANSWER)),
+    )
+    const app = makeTestApp({ env: BOTH, fetch: fake.fetch })
+    const { events } = await postDump(app)
+    expect(events.find((e) => e.type === 'warning').message).toContain('Gemini rejected the API key. Check GEMINI_API_KEY')
+    expect(events.at(-1).type).toBe('done')
+  })
+
+  test('with only a Gemini key there is no OpenRouter fallback', async () => {
+    const fake = fakeFetch(() => errorResponse(503, 'The model is overloaded.'))
+    const app = makeTestApp({ env: { GEMINI_API_KEY: 'gm-test' }, fetch: fake.fetch })
+    const { events } = await postDump(app)
+    expect(fake.calls).toHaveLength(1)
+    expect(events.at(-1)).toMatchObject({ type: 'error', dump: { status: 'failed' } })
+    expect(events.at(-1).message).toContain('Gemini error 503')
+  })
+
+  test('health lists the provider order', async () => {
+    const app = makeTestApp({ env: BOTH })
+    const res = await app.call('GET', '/api/health')
+    expect(res.data).toMatchObject({ aiConfigured: true, model: GEMINI, models: [GEMINI, ULTRA, SUPER] })
   })
 })

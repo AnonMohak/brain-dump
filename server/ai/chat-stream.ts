@@ -1,16 +1,22 @@
 import { createParser } from 'eventsource-parser'
-import type { ChatMessage } from './prompt'
 
-export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+export type ProviderId = 'gemini' | 'openrouter'
 
-export class OpenRouterError extends Error {
+export const PROVIDER_NAME: Record<ProviderId, string> = {
+  gemini: 'Gemini',
+  openrouter: 'OpenRouter',
+}
+
+export class AiError extends Error {
+  readonly provider: ProviderId
   readonly status: number | null
-  /** True when another try (or another model) can work: rate limits, outages, timeouts. */
+  /** True when another try with the same provider can work: rate limits, outages. */
   readonly retryable: boolean
 
-  constructor(message: string, status: number | null, retryable: boolean) {
+  constructor(provider: ProviderId, message: string, status: number | null, retryable: boolean) {
     super(message)
-    this.name = 'OpenRouterError'
+    this.name = 'AiError'
+    this.provider = provider
     this.status = status
     this.retryable = retryable
   }
@@ -22,18 +28,15 @@ export type StreamChunk =
   | { type: 'content'; text: string }
   | { type: 'finish'; reason: string }
 
-export type ChatRequest = {
+export type ChatStreamRequest = {
+  provider: ProviderId
+  url: string
   apiKey: string
-  /** The first model is the main one. OpenRouter tries the next ones when it fails. */
-  models: string[]
-  messages: ChatMessage[]
-  /** "none" turns reasoning off: much faster, slightly less careful. */
-  reasoningEffort: 'none' | 'low' | 'medium' | 'high'
-  maxTokens?: number
+  headers?: Record<string, string>
+  /** An OpenAI-style chat completions body. `stream: true` is added. */
+  body: Record<string, unknown>
   signal?: AbortSignal
   fetch?: typeof fetch
-  /** Extra request fields, for experiments such as tool calls (scripts/ai-smoke.ts). */
-  extraBody?: Record<string, unknown>
 }
 
 function isRetryableStatus(status: number): boolean {
@@ -43,7 +46,9 @@ function isRetryableStatus(status: number): boolean {
 async function readErrorMessage(res: Response): Promise<string> {
   const text = await res.text().catch(() => '')
   try {
-    const json = JSON.parse(text)
+    let json = JSON.parse(text)
+    // Gemini wraps errors in an array.
+    if (Array.isArray(json)) json = json[0]
     const raw = json?.error?.metadata?.raw
     return [json?.error?.message, typeof raw === 'string' ? raw : null].filter(Boolean).join(' - ') || text
   } catch {
@@ -51,45 +56,37 @@ async function readErrorMessage(res: Response): Promise<string> {
   }
 }
 
-/** Streams a chat completion from OpenRouter and yields small, typed chunks. */
-export async function* streamChat(req: ChatRequest): AsyncGenerator<StreamChunk> {
+/**
+ * Streams an OpenAI-compatible chat completion (OpenRouter and Gemini both
+ * speak this format) and yields small, typed chunks.
+ */
+export async function* streamChatCompletion(req: ChatStreamRequest): AsyncGenerator<StreamChunk> {
   const doFetch = req.fetch ?? fetch
-  const [model, ...fallbacks] = req.models
-  const body = {
-    model,
-    ...(fallbacks.length ? { models: req.models } : {}),
-    messages: req.messages,
-    stream: true,
-    temperature: 0.2,
-    max_tokens: req.maxTokens ?? 24_000,
-    reasoning: req.reasoningEffort === 'none' ? { enabled: false } : { effort: req.reasoningEffort },
-    ...req.extraBody,
-  }
+  const { provider } = req
 
   let res: Response
   try {
-    res = await doFetch(OPENROUTER_URL, {
+    res = await doFetch(req.url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${req.apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost/sift',
-        'X-Title': 'Sift',
+        ...req.headers,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...req.body, stream: true }),
       signal: req.signal,
     })
   } catch (error) {
     if (req.signal?.aborted) throw error
-    throw new OpenRouterError(`Network error: ${(error as Error).message}`, null, true)
+    throw new AiError(provider, `Network error: ${(error as Error).message}`, null, true)
   }
 
   if (!res.ok || !res.body) {
-    throw new OpenRouterError(await readErrorMessage(res), res.status, isRetryableStatus(res.status))
+    throw new AiError(provider, await readErrorMessage(res), res.status, isRetryableStatus(res.status))
   }
 
   const queue: StreamChunk[] = []
-  let streamError: OpenRouterError | null = null
+  let streamError: AiError | null = null
   let modelSeen = false
 
   const parser = createParser({
@@ -101,9 +98,10 @@ export async function* streamChat(req: ChatRequest): AsyncGenerator<StreamChunk>
       } catch {
         return
       }
-      if (json.error) {
+      if (Array.isArray(json)) json = json[0]
+      if (json?.error) {
         const status = typeof json.error.code === 'number' ? json.error.code : null
-        streamError = new OpenRouterError(json.error.message ?? 'The model failed', status, true)
+        streamError = new AiError(provider, json.error.message ?? 'The model failed', status, true)
         return
       }
       if (!modelSeen && typeof json.model === 'string') {
@@ -113,15 +111,13 @@ export async function* streamChat(req: ChatRequest): AsyncGenerator<StreamChunk>
       const choice = json.choices?.[0]
       if (!choice) return
       const delta = choice.delta ?? {}
-      if (delta.reasoning || delta.reasoning_details?.length) queue.push({ type: 'reasoning' })
+      if (delta.reasoning || delta.reasoning_content || delta.reasoning_details?.length) {
+        queue.push({ type: 'reasoning' })
+      }
       if (typeof delta.content === 'string' && delta.content) {
         queue.push({ type: 'content', text: delta.content })
       }
-      for (const call of delta.tool_calls ?? []) {
-        const args = call?.function?.arguments
-        if (typeof args === 'string' && args) queue.push({ type: 'content', text: args })
-      }
-      if (choice.finish_reason) queue.push({ type: 'finish', reason: choice.finish_reason })
+      if (choice.finish_reason) queue.push({ type: 'finish', reason: String(choice.finish_reason).toLowerCase() })
     },
   })
 

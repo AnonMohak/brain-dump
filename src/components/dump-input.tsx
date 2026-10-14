@@ -114,7 +114,8 @@ export function DumpInput({
         <p className="mx-3 mb-2 flex items-start gap-2 rounded-lg bg-due-soon/10 px-3 py-2 text-xs text-due-soon">
           <AlertTriangle className="mt-px size-3.5 shrink-0" />
           <span>
-            The AI is not set up. Add <code className="font-mono">OPENROUTER_API_KEY</code> to{' '}
+            The AI is not set up. Add <code className="font-mono">GEMINI_API_KEY</code> or{' '}
+            <code className="font-mono">OPENROUTER_API_KEY</code> to{' '}
             <code className="font-mono">.env</code> and restart the server.
           </span>
         </p>

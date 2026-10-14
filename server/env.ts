@@ -5,6 +5,12 @@ const emptyToUndefined = (value: unknown) =>
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  GEMINI_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  GEMINI_MODEL: z.preprocess(emptyToUndefined, z.string().default('gemini-3.8-flash')),
+  GEMINI_REASONING_EFFORT: z.preprocess(
+    emptyToUndefined,
+    z.enum(['default', 'none', 'minimal', 'low', 'medium', 'high']).default('minimal'),
+  ),
   OPENROUTER_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   OPENROUTER_MODEL: z.preprocess(
     emptyToUndefined,

@@ -2,7 +2,7 @@
 
 Sift turns a messy brain dump into **tasks, ideas, reminders and questions**, with priorities, deadlines, tags and subtasks. Paste your thoughts, press **Ctrl+Enter**, and watch the items stream onto a board.
 
-- Live AI sorting (items appear one by one) with NVIDIA Nemotron 3 Ultra (free) on OpenRouter, and Nemotron 3 Super (free) as a fallback
+- Live AI sorting (items appear one by one) with Google Gemini 3.8 Flash (free tier) first, then NVIDIA Nemotron 3 Ultra and Super (free, on OpenRouter) as fallbacks
 - Tasks and reminders always get a date. Dates from your text are "stated", AI guesses are "suggested" (shown with `~`)
 - Four-column board: drag cards between columns and within a column, edit everything, add items by hand
 - Dump history with re-run, filters (dump, tag, priority, urgent, done, search) kept in the URL
@@ -10,7 +10,7 @@ Sift turns a messy brain dump into **tasks, ideas, reminders and questions**, wi
 - Voice dictation, `.txt`/`.md` file drop, and a **Ctrl+K** command palette
 - Light, dark and system themes; works on phones
 
-Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM on `bun:sqlite`), Zod.
+Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM on `bun:sqlite`), Zod, Gemini API, OpenRouter.
 
 ## Setup
 
@@ -19,11 +19,12 @@ Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM 
    ```sh
    bun install
    ```
-3. Create your `.env` (git ignores it) and add your OpenRouter key:
+3. Create your `.env` (git ignores it) and add your keys (one is enough, two give a fallback):
    ```sh
    cp .env.example .env
    ```
-   Get a key at <https://openrouter.ai/keys> and put it in `OPENROUTER_API_KEY`.
+   - Gemini: get a free key at <https://aistudio.google.com/apikey> and put it in `GEMINI_API_KEY`.
+   - OpenRouter: get a key at <https://openrouter.ai/keys> and put it in `OPENROUTER_API_KEY`.
 4. Start the app:
    ```sh
    bun run dev
@@ -34,8 +35,11 @@ Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM 
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `OPENROUTER_API_KEY` | (empty) | Your OpenRouter key. Without it the app runs, but cannot sort. |
-| `OPENROUTER_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | The main model |
+| `GEMINI_API_KEY` | (empty) | Your Gemini key. When set, Gemini is tried first. |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model |
+| `GEMINI_REASONING_EFFORT` | `minimal` | `minimal` (fastest), `low`, `medium`, `high`, or `default`. Gemini 3 cannot turn thinking off. |
+| `OPENROUTER_API_KEY` | (empty) | Your OpenRouter key (fallback). With no key at all the app runs, but cannot sort. |
+| `OPENROUTER_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | The first OpenRouter model |
 | `OPENROUTER_FALLBACK_MODEL` | `nvidia/nemotron-3-super-120b-a12b:free` | Used when the main model is busy or fails |
 | `OPENROUTER_REASONING_EFFORT` | `none` | `none` is fastest (first item in seconds). `low`, `medium`, `high` think first and can take 1 to 2 minutes. |
 | `HOST` | `127.0.0.1` | Keep this for local use, so other devices cannot use your key |
@@ -62,10 +66,11 @@ Never give a secret a `VITE_` prefix: Vite copies those variables into the brows
 1. The browser sends the dump, its clock and its time zone to `POST /api/dumps`.
 2. The server asks the model for **JSON Lines**: one JSON object per line. The free Ultra endpoint does not support a JSON response mode, and lines stream better than one big object.
 3. A small scanner finds each complete object while the answer streams. Zod checks it, the server fixes small faults (past suggested dates, invented quotes, duplicates), saves it to SQLite and sends it to the browser over Server-Sent Events.
-4. When the model is busy, slow or returns nothing useful, the server tries the fallback model. Items that already arrived are kept.
+4. The order of tries is Gemini, then Nemotron Ultra (with Super as OpenRouter's own fallback), then Super alone. When a model is busy, slow, rejects the key or returns nothing useful, the server tries the next one. Items that already arrived are kept.
 
 ## Free model limits and privacy
 
+- Gemini free-tier limits depend on your account. See them at <https://aistudio.google.com/rate-limit>. On the free tier, Google uses your prompts to improve its products.
 - OpenRouter free models allow 20 requests per minute and 50 requests per day (1000 per day after you buy 10 credits). One dump or one re-run is one request.
 - Free endpoints can log your prompts. Do not put passwords or very private data in a dump.
 - If OpenRouter reports a "data policy" error, allow free endpoints at <https://openrouter.ai/settings/privacy>.

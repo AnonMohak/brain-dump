@@ -12,7 +12,8 @@ import {
 import type { Env } from '../env'
 import { createObjectScanner, tryParseJson } from './json-stream'
 import { normalizeItem, parseAiObject, type NormalizeContext } from './normalize'
-import { OpenRouterError, streamChat } from './openrouter'
+import { AiError, PROVIDER_NAME } from './chat-stream'
+import { attemptPlan } from './providers'
 import { buildMessages } from './prompt'
 
 export type { OrganizeEvent }
@@ -49,31 +50,27 @@ export type OrganizeArgs = {
 }
 
 export const MISSING_KEY_MESSAGE =
-  'The AI is not set up. Add OPENROUTER_API_KEY to .env and restart the server.'
+  'The AI is not set up. Add GEMINI_API_KEY or OPENROUTER_API_KEY to .env and restart the server.'
 
-function describeError(error: unknown, abortReason: unknown): string {
-  if (abortReason === 'timeout') return 'The AI did not answer in time.'
-  if (error instanceof OpenRouterError) {
+function describeError(error: unknown, abortReason: unknown, model: string): string {
+  if (abortReason === 'timeout') return `${model} did not answer in time.`
+  if (error instanceof AiError) {
+    const name = PROVIDER_NAME[error.provider]
+    const keyVar = error.provider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENROUTER_API_KEY'
     const detail = error.message.toLowerCase()
-    if (error.status === 401) return 'OpenRouter rejected the API key. Check OPENROUTER_API_KEY in .env.'
-    if (error.status === 402) return 'OpenRouter says this account has no credits for this model.'
-    if (error.status === 429) {
-      return 'The free model is busy, or the free daily limit is used up (OpenRouter 429). Try again later.'
+    if (error.status === 401 || error.status === 403 || detail.includes('api key not valid') || detail.includes('api_key_invalid')) {
+      return `${name} rejected the API key. Check ${keyVar} in .env.`
     }
-    if (detail.includes('data policy') || detail.includes('privacy')) {
+    if (error.status === 402) return `${name} says this account has no credits for this model.`
+    if (error.status === 429) {
+      return `${model} is busy, or its free limit is used up (${name} 429).`
+    }
+    if (error.provider === 'openrouter' && (detail.includes('data policy') || detail.includes('privacy'))) {
       return 'OpenRouter found no endpoint for your privacy settings. Allow free model endpoints at https://openrouter.ai/settings/privacy.'
     }
-    return `OpenRouter error${error.status ? ` ${error.status}` : ''}: ${error.message}`
+    return `${name} error${error.status ? ` ${error.status}` : ''}: ${error.message}`
   }
   return `AI request failed: ${(error as Error)?.message ?? String(error)}`
-}
-
-/** The model list for each attempt: main model with fallback, then the fallback alone. */
-function attemptPlan(env: Env): string[][] {
-  const primary = env.OPENROUTER_MODEL
-  const fallback = env.OPENROUTER_FALLBACK_MODEL
-  if (!fallback || fallback === primary) return [[primary]]
-  return [[primary, fallback], [fallback]]
 }
 
 /**
@@ -100,7 +97,8 @@ export async function* organizeDump(
   }
 
   try {
-    if (!env.OPENROUTER_API_KEY) {
+    const plan = attemptPlan(env)
+    if (plan.length === 0) {
       const dump = finish({ status: 'failed', error: MISSING_KEY_MESSAGE })
       yield { type: 'error', message: MISSING_KEY_MESSAGE, dump }
       return
@@ -117,14 +115,18 @@ export async function* organizeDump(
     // New items go above everything on the board, in the order the AI sends them.
     const basePosition = topPosition(db) - 1000
 
-    const plan = attemptPlan(env)
-    for (const [index, models] of plan.entries()) {
+    // Providers whose key was rejected; their other tries are skipped.
+    const blocked = new Set<string>()
+    let tried = 0
+    for (const attempt of plan) {
       if (args.signal.aborted) break
-      if (index > 0) {
-        yield { type: 'warning', message: `${lastError} Trying again with ${models[0]}.` }
+      if (blocked.has(attempt.provider)) continue
+      if (tried > 0) {
+        yield { type: 'warning', message: `${lastError} Trying ${attempt.model} instead.` }
       }
+      tried++
       lastError = null
-      yield { type: 'status', phase: 'thinking', model: models[0] ?? null }
+      yield { type: 'status', phase: 'thinking', model: attempt.model }
 
       const controller = new AbortController()
       const onCancel = () => controller.abort('cancelled')
@@ -133,17 +135,9 @@ export async function* organizeDump(
       const totalTimer = setTimeout(() => controller.abort('timeout'), timeouts.totalMs)
       const scanner = createObjectScanner()
       let writing = false
-      let retryable = true
 
       try {
-        for await (const chunk of streamChat({
-          apiKey: env.OPENROUTER_API_KEY,
-          models,
-          messages,
-          reasoningEffort: env.OPENROUTER_REASONING_EFFORT,
-          signal: controller.signal,
-          fetch: deps.fetch,
-        })) {
+        for await (const chunk of attempt.stream(messages, controller.signal, deps.fetch)) {
           clearTimeout(idleTimer)
           idleTimer = setTimeout(() => controller.abort('timeout'), timeouts.idleMs)
 
@@ -179,8 +173,8 @@ export async function* organizeDump(
         if (saved === 0) lastError = 'The AI answer had no readable items.'
       } catch (error) {
         if (args.signal.aborted) break
-        lastError = describeError(error, controller.signal.reason)
-        if (error instanceof OpenRouterError) retryable = error.retryable
+        lastError = describeError(error, controller.signal.reason, attempt.model)
+        if (error instanceof AiError && !error.retryable) blocked.add(attempt.provider)
       } finally {
         clearTimeout(idleTimer)
         clearTimeout(totalTimer)
@@ -188,7 +182,7 @@ export async function* organizeDump(
       }
 
       // Keep a partial answer: the items that arrived are already saved.
-      if (saved > 0 || !retryable) break
+      if (saved > 0) break
     }
 
     if (args.signal.aborted) {

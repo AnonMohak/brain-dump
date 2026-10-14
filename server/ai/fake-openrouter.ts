@@ -1,7 +1,8 @@
-// A fake OpenRouter for tests. It answers with the same SSE format as the real API.
+// A fake AI server for tests (OpenRouter and Gemini use the same OpenAI-style SSE format).
 
 export const ULTRA = 'nvidia/nemotron-3-ultra-550b-a55b:free'
 export const SUPER = 'nvidia/nemotron-3-super-120b-a12b:free'
+export const GEMINI = 'gemini-3.8-flash'
 
 const encoder = new TextEncoder()
 
@@ -60,14 +61,16 @@ type Handler = (body: any, init: RequestInit) => Response | Promise<Response>
 /** A fetch that answers each call with the next handler and records the request bodies. */
 export function fakeFetch(...handlers: Handler[]) {
   const calls: any[] = []
-  const fn = (async (_url: string | URL | Request, init?: RequestInit) => {
+  const urls: string[] = []
+  const fn = (async (url: string | URL | Request, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body ?? '{}'))
     calls.push(body)
+    urls.push(String(url))
     const handler = handlers[Math.min(calls.length - 1, handlers.length - 1)]
     if (!handler) throw new Error('fakeFetch: no handler')
     return handler(body, init ?? {})
   }) as typeof fetch
-  return { fetch: fn, calls }
+  return { fetch: fn, calls, urls }
 }
 
 /** Splits text into small pieces, like a real token stream. */

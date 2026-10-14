@@ -23,7 +23,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const json = (body: unknown) => JSON.stringify(body)
 
-export type Health = { ok: boolean; aiConfigured: boolean; model: string }
+export type Health = { ok: boolean; aiConfigured: boolean; model: string | null; models: string[] }
 export type Session = { required: boolean; authenticated: boolean }
 
 export const api = {

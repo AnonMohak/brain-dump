@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import type { AiTimeouts } from './ai/organize'
+import { attemptPlan } from './ai/providers'
 import { authRoutes, requireSession } from './auth'
 import type { Db } from './db/client'
 import type { Env } from './env'
@@ -21,13 +22,15 @@ export function createApp({ env, db, fetch, aiTimeouts }: AppDeps) {
   const api = new Hono()
     .use('*', bodyLimit({ maxSize: 256 * 1024 }))
     .use('*', requireSession(env))
-    .get('/health', (c) =>
-      c.json({
+    .get('/health', (c) => {
+      const plan = attemptPlan(env)
+      return c.json({
         ok: true,
-        aiConfigured: Boolean(env.OPENROUTER_API_KEY),
-        model: env.OPENROUTER_MODEL,
-      }),
-    )
+        aiConfigured: plan.length > 0,
+        model: plan[0]?.model ?? null,
+        models: plan.map((attempt) => attempt.model),
+      })
+    })
     .route('/', authRoutes(env))
     .route('/items', itemRoutes(db))
     .route('/dumps', dumpRoutes({ db, env, fetch, timeouts: aiTimeouts }))
