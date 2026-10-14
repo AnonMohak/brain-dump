@@ -1,16 +1,12 @@
 import { cn } from '@/lib/utils'
 
-/** The Sift mark: three lines that get shorter, like thoughts that settle. */
+/** The Sift mark: scattered thoughts (arrows) with their points (dots). White arrows in dark mode. */
 export function Logo({ className }: { className?: string }) {
+  const size = cn('size-6 shrink-0', className)
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={cn('size-6 shrink-0', className)}>
-      <rect width="32" height="32" rx="8" className="fill-primary" />
-      <path
-        d="M8 10.5h16M11 16h10M14 21.5h4"
-        stroke="white"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-    </svg>
+    <>
+      <img src="/favicon.png" alt="" aria-hidden="true" className={cn(size, 'dark:hidden')} />
+      <img src="/favicon-dark.png" alt="" aria-hidden="true" className={cn(size, 'hidden dark:block')} />
+    </>
   )
 }
