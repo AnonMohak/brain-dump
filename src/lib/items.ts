@@ -1,5 +1,7 @@
 import { dueState } from '@shared/dates'
-import { ITEM_TYPES, type Item, type ItemType, type Priority } from '@shared/schemas'
+import type { Item, ItemType, Priority } from '@shared/schemas'
+
+export { compareItems, groupByType } from '@shared/view'
 
 export const TYPE_META: Record<ItemType, { label: string; plural: string; dot: string; empty: string }> = {
   task: { label: 'Task', plural: 'Tasks', dot: 'bg-type-task', empty: 'Things to do land here.' },
@@ -24,21 +26,8 @@ export const PRIORITY_META: Record<Priority, { label: string; bars: number; rank
   low: { label: 'Low', bars: 1, rank: 2 },
 }
 
-/** Open items first, then the board order. */
-export function compareItems(a: Item, b: Item): number {
-  if (a.status !== b.status) return a.status === 'open' ? -1 : 1
-  return a.position - b.position
-}
-
 /** Open items that are overdue or due within 24 hours. */
 export function isUrgent(item: Item, now = new Date()): boolean {
   const state = dueState(item, now)
   return state === 'overdue' || state === 'soon'
-}
-
-export function groupByType(items: Item[]): Record<ItemType, Item[]> {
-  const groups: Record<ItemType, Item[]> = { task: [], idea: [], reminder: [], question: [] }
-  for (const item of items) groups[item.type].push(item)
-  for (const type of ITEM_TYPES) groups[type].sort(compareItems)
-  return groups
 }

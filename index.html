@@ -7,6 +7,15 @@
     <meta name="description" content="Sift turns a messy brain dump into tasks, ideas, reminders and questions." />
     <meta name="color-scheme" content="light dark" />
     <title>Sift</title>
+    <script>
+      // Set the theme before the first paint (same logic as src/hooks/use-theme.ts).
+      try {
+        var t = localStorage.getItem('sift:theme')
+        var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -30,6 +30,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { PRIORITY_META, TYPE_META } from '@/lib/items'
 import { cn } from '@/lib/utils'
 
+/** Keeps clicks and key presses on inner controls from starting a card drag. */
+const stopDrag = {
+  onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+  onKeyDown: (e: React.KeyboardEvent) => e.stopPropagation(),
+}
+
 export function PriorityIcon({ priority, className }: { priority: Priority; className?: string }) {
   const bars = PRIORITY_META[priority].bars
   return (
@@ -133,7 +139,7 @@ export const ItemCard = memo(function ItemCard({
         <Checkbox
           checked={done}
           onCheckedChange={(checked) => onUpdate({ status: checked ? 'done' : 'open' })}
-          onPointerDown={(e) => e.stopPropagation()}
+          {...stopDrag}
           aria-label={done ? 'Mark as open' : 'Mark as done'}
           className="mt-0.5 rounded-full"
         />
@@ -142,7 +148,7 @@ export const ItemCard = memo(function ItemCard({
           <button
             type="button"
             onClick={onEdit}
-            onPointerDown={(e) => e.stopPropagation()}
+            {...stopDrag}
             className={cn(
               'block w-full text-left text-sm leading-snug font-medium text-pretty outline-none focus-visible:underline',
               onEdit ? 'cursor-pointer' : 'cursor-default',
@@ -173,7 +179,7 @@ export const ItemCard = memo(function ItemCard({
               <button
                 type="button"
                 onClick={() => setShowQuote((v) => !v)}
-                onPointerDown={(e) => e.stopPropagation()}
+                {...stopDrag}
                 aria-expanded={showQuote}
                 aria-label={showQuote ? 'Hide the source quote' : 'Show the source quote'}
                 className={cn(
@@ -212,7 +218,7 @@ function ItemMenu({
           variant="ghost"
           size="icon-xs"
           aria-label="Item actions"
-          onPointerDown={(e) => e.stopPropagation()}
+          {...stopDrag}
           className="-mt-0.5 -mr-1 text-muted-foreground opacity-100 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 sm:opacity-0"
         >
           <MoreHorizontal />
