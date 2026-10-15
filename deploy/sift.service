@@ -1,0 +1,30 @@
+[Unit]
+Description=Sift brain dump organizer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sift
+Group=sift
+WorkingDirectory=/opt/sift
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3001 DATABASE_PATH=/var/lib/sift/sift.db
+EnvironmentFile=/etc/sift/sift.env
+ExecStart=/usr/local/bin/bun server/index.ts
+Restart=always
+RestartSec=3
+
+# The app may only write its database.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sift
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

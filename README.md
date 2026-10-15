@@ -99,6 +99,17 @@ Sift can live under a path, for example `https://me-momo.co.in/sift`. A proxy in
 2. Set `PUBLIC_URL`, `ORIGIN_KEY` and `APP_PASSWORD` in the server's env file.
 3. Run `bun run start` with `HOST=127.0.0.1`. A Cloudflare Tunnel connects the proxy to it, so no port is open.
 
+The `deploy/` folder has the server files for an Ubuntu VM:
+
+| File | Purpose |
+|---|---|
+| `setup.sh` | One-time setup as root: Bun, the `sift` (app) and `deploy` users, folders, services, swap on small VMs, cloudflared. Safe to run again. |
+| `sift.service` | Runs the app (port 3001, local only). Secrets: `/etc/sift/sift.env`. Database: `/var/lib/sift/sift.db`. |
+| `sift-deploy.sh` | The only command the GitHub Action's SSH key can run: it takes the built `dist/`, checks out the commit, restarts, checks health, and goes back to the old version on failure. |
+| `sift-backup.*` | Nightly SQLite backup at 03:00 India time: 14 days in `/var/backups/sift`, 30 days in Cloudflare R2 (`/etc/sift/backup.env`). |
+
+`.github/workflows/deploy.yml` tests and builds every push to `master`. It deploys only when the repository secrets `DEPLOY_SSH_KEY`, `DEPLOY_HOST` and `DEPLOY_KNOWN_HOSTS` exist. `.env.production.example` lists the server values.
+
 ## Install as an app
 
 In production (`bun run build && bun run start`), Sift is a Progressive Web App. In Chrome or Edge, use the install icon in the address bar (or "Install Sift" in the menu). The app shell then opens offline too; your items still come from the Sift server.

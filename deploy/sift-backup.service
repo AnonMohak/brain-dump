@@ -1,0 +1,12 @@
+[Unit]
+Description=Sift database backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The same user as the app, so the SQLite -wal/-shm files keep the right owner.
+User=sift
+Group=sift
+EnvironmentFile=-/etc/sift/backup.env
+ExecStart=/bin/bash /opt/sift/deploy/sift-backup.sh

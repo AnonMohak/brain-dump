@@ -1,3 +1,3 @@
-* text=auto eol=lf
-*.png binary
-*.woff2 binary
+# Server scripts and units run on Linux: always LF.
+deploy/** text eol=lf
+*.sh text eol=lf
