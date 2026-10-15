@@ -46,6 +46,9 @@ Stack: React 19 + Vite, shadcn/ui (Tailwind v4), Bun, Hono, SQLite (Drizzle ORM 
 | `PORT` | `3001` | API port (Vite forwards `/api` to it) |
 | `DATABASE_PATH` | `./data/sift.db` | SQLite file (git ignores `data/`) |
 | `APP_PASSWORD` | (empty) | When set, the app asks for this password |
+| `BASE_PATH` | `/` | Build time only: the path where the app lives, for example `/sift/` |
+| `PUBLIC_URL` | (empty) | Online only: the address people open, for example `https://me-momo.co.in/sift`. Sets the Google callback, the return address after sign-in, and a secure cookie for that path. |
+| `ORIGIN_KEY` | (empty) | Online only: a long random value. The server answers only requests with this value in the `x-sift-origin-key` header (the router adds it). |
 
 Never give a secret a `VITE_` prefix: Vite copies those variables into the browser code.
 
@@ -86,9 +89,15 @@ drizzle/  SQL migrations
 scripts/  ai-smoke.ts and its sample dumps
 ```
 
-## Running on a server later
+## Running on a server
 
-Set `HOST=0.0.0.0`, choose a `PORT`, set `APP_PASSWORD`, then run `bun run build && bun run start` behind HTTPS. The app needs a host that runs Bun with a writable disk for the SQLite file (for example a VPS or Fly.io). Static hosts such as Cloudflare Pages cannot run it.
+The app needs a host that runs Bun with a writable disk for the SQLite file (for example a VPS). Static hosts such as Cloudflare Pages cannot run it.
+
+Sift can live under a path, for example `https://me-momo.co.in/sift`. A proxy in front (the me-momo-router Worker) removes `/sift` and adds the origin key, so the server itself always uses `/api/...`:
+
+1. Build with the path: `BASE_PATH=/sift/ bun run build`.
+2. Set `PUBLIC_URL`, `ORIGIN_KEY` and `APP_PASSWORD` in the server's env file.
+3. Run `bun run start` with `HOST=127.0.0.1`. A Cloudflare Tunnel connects the proxy to it, so no port is open.
 
 ## Install as an app
 

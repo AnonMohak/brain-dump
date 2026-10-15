@@ -1,5 +1,6 @@
 import { createParser } from 'eventsource-parser'
 import { ApiError } from './api'
+import { apiUrl } from './base'
 
 /**
  * POSTs to an SSE endpoint and calls `onEvent` for each event.
@@ -11,7 +12,7 @@ export async function postStream<Event>(
   onEvent: (event: Event) => void,
   signal: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
     body: JSON.stringify(body),

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import type { AiTimeouts } from './ai/organize'
 import { attemptPlan } from './ai/providers'
-import { authRoutes, requireSession } from './auth'
+import { authRoutes, requireOriginKey, requireSession } from './auth'
 import type { Db } from './db/client'
 import type { Env } from './env'
 import { aiRoutes } from './routes/ai'
@@ -24,6 +24,7 @@ export type AppDeps = {
 
 export function createApp({ env, db, fetch, aiTimeouts, calendarSync }: AppDeps) {
   const app = new Hono()
+  app.use('*', requireOriginKey(env))
   const calendar = calendarSync ?? new CalendarSync({ db, env })
 
   const api = new Hono()

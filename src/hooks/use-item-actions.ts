@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { apiUrl } from '@/lib/base'
 import { describeChange, inversePatch } from '@/lib/changes'
 import { dumpsKey, itemsKey, useUpdateItem } from './use-data'
 
@@ -80,7 +81,7 @@ export function useItemActions() {
     const flush = () => {
       for (const [id, timer] of map) {
         clearTimeout(timer)
-        void fetch(`/api/items/${id}`, { method: 'DELETE', keepalive: true })
+        void fetch(apiUrl(`/items/${id}`), { method: 'DELETE', keepalive: true })
       }
       map.clear()
     }

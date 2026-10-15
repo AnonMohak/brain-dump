@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono, type MiddlewareHandler } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import { loginInputSchema } from '../shared/schemas'
-import type { Env } from './env'
+import { publicPath, type Env } from './env'
 import { validate } from './validate'
 
 const COOKIE = 'sift_session'
@@ -36,6 +36,17 @@ export function requireSession(env: Env): MiddlewareHandler {
   }
 }
 
+/** When ORIGIN_KEY is set, only the router (which adds the header) may use the server. */
+export function requireOriginKey(env: Env): MiddlewareHandler {
+  return async (c, next) => {
+    if (!env.ORIGIN_KEY) return next()
+    if (!safeEqual(c.req.header('x-sift-origin-key') ?? '', env.ORIGIN_KEY)) {
+      return c.text('Forbidden', 403)
+    }
+    return next()
+  }
+}
+
 export function authRoutes(env: Env) {
   return new Hono()
     .get('/session', (c) =>
@@ -55,14 +66,15 @@ export function authRoutes(env: Env) {
       setCookie(c, COOKIE, sessionToken(env.APP_PASSWORD), {
         httpOnly: true,
         sameSite: 'Strict',
-        secure: new URL(c.req.url).protocol === 'https:',
-        path: '/',
+        // Behind the router the server sees plain HTTP: trust PUBLIC_URL instead.
+        secure: new URL(env.PUBLIC_URL ?? c.req.url).protocol === 'https:',
+        path: publicPath(env) || '/',
         maxAge: MAX_AGE_SECONDS,
       })
       return c.json({ ok: true })
     })
     .post('/logout', (c) => {
-      deleteCookie(c, COOKIE, { path: '/' })
+      deleteCookie(c, COOKIE, { path: publicPath(env) || '/' })
       return c.json({ ok: true })
     })
 }

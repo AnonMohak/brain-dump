@@ -164,6 +164,34 @@ describe('password', () => {
   })
 })
 
+describe('online behind the router', () => {
+  const KEY = 'k'.repeat(32)
+  const ONLINE = { PUBLIC_URL: 'https://me-momo.co.in/sift/', ORIGIN_KEY: KEY, APP_PASSWORD: 'hunter2' }
+
+  test('without the origin key every request is refused', async () => {
+    const { call } = makeTestApp({ env: ONLINE })
+    expect((await call('GET', '/api/health')).status).toBe(403)
+    expect((await call('GET', '/api/health', undefined, { 'x-sift-origin-key': 'wrong' })).status).toBe(403)
+    expect((await call('GET', '/', undefined, {})).status).toBe(403)
+    expect((await call('GET', '/api/health', undefined, { 'x-sift-origin-key': KEY })).status).toBe(200)
+  })
+
+  test('the session cookie is secure and limited to /sift, also over plain HTTP from the tunnel', async () => {
+    const { call } = makeTestApp({ env: ONLINE })
+    const ok = await call('POST', 'http://127.0.0.1:3001/api/login', { password: 'hunter2' }, { 'x-sift-origin-key': KEY })
+    const setCookie = ok.headers.get('set-cookie') ?? ''
+    expect(setCookie).toContain('Secure')
+    expect(setCookie).toContain('Path=/sift')
+    const out = await call('POST', '/api/logout', undefined, { 'x-sift-origin-key': KEY })
+    expect(out.headers.get('set-cookie')).toContain('Path=/sift')
+  })
+
+  test('a short origin key or a bad public URL is a config error', () => {
+    expect(() => makeTestApp({ env: { ORIGIN_KEY: 'short' } })).toThrow('ORIGIN_KEY')
+    expect(() => makeTestApp({ env: { PUBLIC_URL: 'ftp://x' } })).toThrow('PUBLIC_URL')
+  })
+})
+
 describe('repeating items', () => {
   test('marking a repeating item done moves it to the next date and resets steps', async () => {
     const { call } = makeTestApp()

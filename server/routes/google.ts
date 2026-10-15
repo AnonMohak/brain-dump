@@ -10,11 +10,16 @@ type PendingLogin = { verifier: string; returnTo: string; timeZone: string; expi
 
 /** The callback URL that Google sends the user back to. */
 export function redirectUri(env: Env): string {
-  return env.GOOGLE_REDIRECT_URI ?? `http://127.0.0.1:${env.PORT}/api/google/callback`
+  if (env.GOOGLE_REDIRECT_URI) return env.GOOGLE_REDIRECT_URI
+  return env.PUBLIC_URL ? `${env.PUBLIC_URL}/api/google/callback` : `http://127.0.0.1:${env.PORT}/api/google/callback`
 }
 
-/** Only send the browser back to Sift itself (localhost in development, or the same origin). */
-function safeReturnTo(value: string | undefined, requestUrl: string): string {
+/**
+ * Only send the browser back to Sift itself. Online that is always PUBLIC_URL;
+ * locally it is localhost or the same origin.
+ */
+function safeReturnTo(value: string | undefined, requestUrl: string, publicUrl?: string): string {
+  if (publicUrl) return publicUrl + '/'
   const fallback = new URL('/', requestUrl).toString()
   if (!value) return fallback
   try {
@@ -52,7 +57,7 @@ export function googleRoutes(deps: { env: Env; sync: CalendarSync; fetch?: typeo
       const { verifier, challenge } = createPkce()
       pending.set(state, {
         verifier,
-        returnTo: safeReturnTo(c.req.query('return'), c.req.url),
+        returnTo: safeReturnTo(c.req.query('return'), c.req.url, env.PUBLIC_URL),
         timeZone: c.req.query('tz') || 'UTC',
         expiresAt: now + STATE_TTL_MS,
       })

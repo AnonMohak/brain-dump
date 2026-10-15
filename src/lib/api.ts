@@ -1,3 +1,4 @@
+import { apiUrl } from './base'
 import type { CreateItemInput, Dump, Item, UpdateItemInput } from '@shared/schemas'
 
 export class ApiError extends Error {
@@ -10,7 +11,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...init,
     headers: init.body ? { 'content-type': 'application/json', ...init.headers } : init.headers,
   })

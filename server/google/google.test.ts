@@ -235,6 +235,20 @@ describe('Google routes', () => {
     expect((await call('GET', '/api/google/callback?state=x')).status).toBe(400)
   })
 
+  test('online, Google returns to PUBLIC_URL with its callback', async () => {
+    const env = { ...GOOGLE_ENV, PUBLIC_URL: 'https://me-momo.co.in/sift' }
+    const base = makeTestApp({ env })
+    const google = fakeGoogle()
+    const sync = new CalendarSync({ db: base.db, env: base.env, fetch: google.fetch, delayMs: 0 })
+    const app = (await import('../app')).createApp({ env: base.env, db: base.db, calendarSync: sync, fetch: google.fetch })
+    // The tunnel sends plain HTTP to 127.0.0.1; the browser value is ignored.
+    const start = await app.request('http://127.0.0.1:3001/api/google/connect?return=https://evil.example/')
+    const auth = new URL(start.headers.get('location')!)
+    expect(auth.searchParams.get('redirect_uri')).toBe('https://me-momo.co.in/sift/api/google/callback')
+    const res = await app.request(`http://127.0.0.1:3001/api/google/callback?state=${auth.searchParams.get('state')}&error=access_denied`)
+    expect(res.headers.get('location')).toStartWith('https://me-momo.co.in/sift/?google=error')
+  })
+
   test('a return URL to another site is not followed', async () => {
     const base = makeTestApp({ env: GOOGLE_ENV })
     const google = fakeGoogle()

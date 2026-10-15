@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { itemsKey } from '@/hooks/use-data'
 import { api, type GoogleStatus } from '@/lib/api'
+import { apiUrl, BASE } from '@/lib/base'
 import { timeAgo } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
@@ -21,10 +22,10 @@ const statusKey = ['google-status'] as const
 /** Starts the Google sign-in in this tab; Google sends the user back with ?google=… */
 function connect() {
   const params = new URLSearchParams({
-    return: window.location.origin + '/',
+    return: window.location.origin + BASE,
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
   })
-  window.location.assign(`/api/google/connect?${params}`)
+  window.location.assign(`${apiUrl('/google/connect')}?${params}`)
 }
 
 /** Shows the result of the Google sign-in once, then removes it from the URL. */

@@ -1,7 +1,9 @@
 // Sift service worker: keeps the app shell available offline.
 // It never caches /api: your items always come from the server.
-const CACHE = 'sift-shell-v1'
-const SHELL = ['/', '/manifest.webmanifest', '/favicon.png', '/favicon-dark.png', '/icon-192.png']
+// All paths are relative to the scope, so the same file works at "/" and at "/sift/".
+const CACHE = 'sift-shell-v2'
+const BASE = new URL(self.registration.scope).pathname
+const SHELL = ['', 'manifest.webmanifest', 'favicon.png', 'favicon-dark.png', 'icon-192.png'].map((path) => BASE + path)
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)))
@@ -20,7 +22,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
-  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith(BASE + 'api/')) return
 
   // Pages: network first, so a new build shows at once; the cached shell when offline.
   if (request.mode === 'navigate') {
@@ -28,10 +30,10 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone()
-          caches.open(CACHE).then((cache) => cache.put('/', copy))
+          if (response.ok) caches.open(CACHE).then((cache) => cache.put(BASE, copy))
           return response
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match(BASE)),
     )
     return
   }
@@ -42,7 +44,7 @@ self.addEventListener('fetch', (event) => {
       (cached) =>
         cached ||
         fetch(request).then((response) => {
-          if (response.ok && (url.pathname.startsWith('/assets/') || SHELL.includes(url.pathname))) {
+          if (response.ok && (url.pathname.startsWith(BASE + 'assets/') || SHELL.includes(url.pathname))) {
             const copy = response.clone()
             caches.open(CACHE).then((cache) => cache.put(request, copy))
           }

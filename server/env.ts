@@ -35,9 +35,24 @@ const envSchema = z.object({
   PORT: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().default(3001)),
   DATABASE_PATH: z.preprocess(emptyToUndefined, z.string().default('./data/sift.db')),
   APP_PASSWORD: z.preprocess(emptyToUndefined, z.string().optional()),
+  /** Online only: the address people open, for example https://me-momo.co.in/sift */
+  PUBLIC_URL: z.preprocess(
+    emptyToUndefined,
+    z
+      .url({ protocol: /^https?$/ })
+      .transform((value) => value.replace(/\/+$/, ''))
+      .optional(),
+  ),
+  /** Online only: the router sends this in the x-sift-origin-key header. Other requests get 403. */
+  ORIGIN_KEY: z.preprocess(emptyToUndefined, z.string().min(24).optional()),
 })
 
 export type Env = z.infer<typeof envSchema>
+
+/** The path part of PUBLIC_URL ("/sift"), or "" when Sift runs at the root. */
+export function publicPath(env: Env): string {
+  return env.PUBLIC_URL ? new URL(env.PUBLIC_URL).pathname.replace(/\/+$/, '') : ''
+}
 
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
   const result = envSchema.safeParse(source)
